@@ -21,6 +21,7 @@ void xchg_data(FILE *fp, int sockfd) {
             if (Read(sockfd, recvline, MAXLINE) == 0) {
                 err_quit("str_cli: server terminated prematurely");
             }
+            printf("recv: ", recvline);
         }
 
         if (FD_ISSET(fileno(fp), &rset)) {
