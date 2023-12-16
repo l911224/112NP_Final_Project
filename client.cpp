@@ -1,8 +1,6 @@
-#include <iostream>
+#include <stdio.h>
 
 #include "unp.h"
-
-using namespace std;
 
 void xchg_data(FILE *fp, int sockfd) {
     int maxfdp1;
@@ -21,7 +19,7 @@ void xchg_data(FILE *fp, int sockfd) {
             if (Read(sockfd, recvline, MAXLINE) == 0) {
                 err_quit("str_cli: server terminated prematurely");
             }
-            printf("recv: ", recvline);
+            printf("recv: %s", recvline);
         }
 
         if (FD_ISSET(fileno(fp), &rset)) {
