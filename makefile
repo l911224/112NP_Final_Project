@@ -7,3 +7,6 @@ client:	client.o
 
 server:	server.o
 		${CC} ${CFLAGS} -o $@ server.o ${LIBS}
+
+test:	test.o
+		${CC} ${CFLAGS} -o $@ test.o ${LIBS}

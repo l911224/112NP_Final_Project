@@ -1,1 +1,7 @@
 .vscode
+*.o
+*.exe
+*.out
+client
+server
+test
