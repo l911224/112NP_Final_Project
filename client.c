@@ -112,6 +112,8 @@ void xchg_data(FILE *fp, int sockfd) {
             }
 
             printf("recv: %s", recvline);
+            fflush(stdout);
+
 
             if (strcmp(recvline, "Game start!\n") == 0) {
                 od_clr_scr();
