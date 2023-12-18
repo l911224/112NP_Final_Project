@@ -1,15 +1,6 @@
 #include <stdio.h>
 
-// #include "unp.h"
-
-void draw_title() {
-    od_set_cursor(1, 1);
-    od_disp_str("　__   __ _    _   _ _____ __________ _____ \n\r");
-    od_disp_str("　\\ \\ / // \\  | | | |_   _|__  / ____| ____|\n\r");
-    od_disp_str("　 \\ V // _ \\ | |_| | | |   / /|  _| |  _|  \n\r");
-    od_disp_str("　  | |/ ___ \\|  _  | | |  / /_| |___| |___ \n\r");
-    od_disp_str("　  |_/_/   \\_\\_| |_| |_| /____|_____|_____|\n\r");
-}
+#include "unp.h"
 
 void od_set_cursor(int row, int col) {
     char msg_buf[10];
@@ -20,6 +11,15 @@ void od_set_cursor(int row, int col) {
 void od_clr_scr() { printf("\x1B[2J"); }
 
 void od_disp_str(const char *str) { printf(str); }
+
+void draw_title() {
+    od_set_cursor(1, 1);
+    od_disp_str("　███████╗\n\r");
+    od_disp_str("　\\ \\ / // \\  | | | |_   _|__  / ____| ____|\n\r");
+    od_disp_str("　 \\ V // _ \\ | |_| | | |   / /|  _| |  _|  \n\r");
+    od_disp_str("　  | |/ ___ \\|  _  | | |  / /_| |___| |___ \n\r");
+    od_disp_str("　  |_/_/   \\_\\_| |_| |_| /____|_____|_____|\n\r");
+}
 
 void draw_table() {
     od_set_cursor(6, 1);
