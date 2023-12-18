@@ -21,9 +21,10 @@ char* xchg_user_data(int sockfd);
 void *waitingRoom(void * argv);
 void gameRoom(int sockfd[4], char userID[4][MAXLINE]);
 int logout(char ID[MAXLINE]);
+int dice(int num, char* diceValue[6]);
 
 int main(int argc, char **argv){
-    int listenfd, connfd[20] = {0}, maxfdp1 = -1, count = 0;
+    int listenfd, connfd[20] = {0}, maxfdp1 = -1;
     struct sockaddr_in cliaddr[20], servaddr;
     char userID[20][MAXLINE];
     socklen_t clilen[20];
@@ -74,7 +75,7 @@ int main(int argc, char **argv){
     pthread_create(&wr, NULL, waitingRoom, NULL);
     for(;;){
         //printf("Parent Id = %s and Flag = %d\n", IDBuffer, connfdFlag);
-        if(startGame){  // Start a game
+        if(startGame || numOfMember == 4){  // Start a game
             if(Fork() == 0){    // Fork child process to start a game
                 Close(listenfd);
                 gameRoom(waitingRoomConnfd, waitingRoomUserID);
@@ -82,15 +83,23 @@ int main(int argc, char **argv){
             }
             startGame = 0;
             numOfMember = 0;
-            count = 0;
             memset(waitingRoomConnfd, 0, sizeof(waitingRoomConnfd));
             memset(waitingRoomUserID, 0, sizeof(waitingRoomUserID));
             memset(connfd, 0, sizeof(connfd));
             memset(userID, 0, sizeof(userID));
+            memset(cliaddr, 0, sizeof(cliaddr));
+            memset(clilen, 0, sizeof(clilen));
             continue;
         }
 
         if(*connfdFlag != -10){   // Find space and add user to waiting room
+            if(*connfdFlag >=  1000){
+                connfd[*connfdFlag - 1000] = 0;
+                memset(IDBuffer, 0, sizeof(IDBuffer));
+                *connfdFlag = -10;
+                printf("Connfd reset\n");
+                continue;
+            }
             numOfMember++;
             int freeSpace = 0;
             for(int i = 0; i < 4; i++){
@@ -108,9 +117,6 @@ int main(int argc, char **argv){
                 if(waitingRoomConnfd[i] == 0 || i == *connfdFlag) continue;
                 Writen(waitingRoomConnfd[i], sendline, MAXLINE);
             }
-            //printf("waitingRoomConnfd = %d ", waitingRoomConnfd[*connfdFlag]);
-            //fflush(stdout);
-            //printf("waitingRoomUserId = %s\n", waitingRoomUserID[*connfdFlag]);
             *connfdFlag = -10;
             memset(IDBuffer, 0, sizeof(IDBuffer));
             continue;
@@ -130,20 +136,26 @@ int main(int argc, char **argv){
             perror("select error");
             break;
         }
-
+        int freeSpace_Connfd = 0;
+        for(int i = 0; i < 20; i++){
+            if(connfd[i] == 0){ 
+                freeSpace_Connfd = i;
+                break;
+            }
+        }
         if(FD_ISSET(listenfd, &rset)){  // New connect arrived
-            if ((connfd[count] = accept(listenfd, (SA *) &cliaddr[count], &clilen[count])) < 0) {
+            if ((connfd[freeSpace_Connfd] = accept(listenfd, (SA *) &cliaddr[freeSpace_Connfd], &clilen[freeSpace_Connfd])) < 0) {
                 if (errno == EINTR) continue;
                 else perror("accept error");
 		    }
-            int num = count++;
+            int num = freeSpace_Connfd;
             if(Fork() == 0){    //Fork child process to get user ID
                 close(listenfd);
                 // Use shared memory to store data
                 strcpy(IDBuffer, xchg_user_data(connfd[num]));
                 if(!strcmp(IDBuffer, "error")){
                     printf("Client disconnected\n");
-                    memset(IDBuffer, 0, sizeof(IDBuffer));
+                    *connfdFlag = 1000 + num;
                     exit(0);
                 }
                 *connfdFlag = num;
@@ -158,16 +170,63 @@ int main(int argc, char **argv){
 }
 
 void gameRoom(int sockfd[4], char userID[4][MAXLINE]){
-    char sendline[MAXLINE], recvline[MAXLINE];
+    char sendline[MAXLINE], recvline[MAXLINE], scoreTable[4][19] = {-1};
+    int maxfdp1 = -1, stepCount = 0, turn = 0, doneFlag = 1;
+    fd_set rset;
+    FD_ZERO(&rset);
     for(int i = 0;i < 4; i++){
         if(sockfd[i] == 0) continue;
-        Writen(sockfd[i], "Successfully entered a game!\n\n", MAXLINE);
-        Writen(sockfd[i], "1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19\n\n", MAXLINE);
-        close(sockfd[i]);
+        Writen(sockfd[i], "m:Successfully entered a game!\n\n", MAXLINE);
+        Writen(sockfd[i], "s:1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19\n\n", MAXLINE);
     }
+
+    for(;;){
+        // Fdset
+        for(int i = 0;i < 4; i++){
+            if(sockfd[i] == 0) continue;
+            FD_SET(sockfd[i], &rset);
+            maxfdp1 = max(maxfdp1, sockfd[i]);
+        }
+        int sel = select(maxfdp1, &rset, 0, 0, &timeout);
+        if (sel == 0) continue;
+        else if (sel < 0) {
+            if (errno == EINTR) {
+                continue;
+            }
+            // Handle other select error
+            perror("select error");
+            break;
+        }
+        // Recv messeages
+        for(int i = 0; i < 4; i++){
+            if(FD_ISSET(maxfdp1, &rset)){
+                if(Read(sockfd[i], recvline, MAXLINE) == 0 || recvline[0] == 'Q'){  // Deal with ctrl + c and 'Q'
+                    Writen(sockfd[i], "m:See you next time!\n", MAXLINE);
+                    close(sockfd[i]);
+                    for(int j = 0; j < 4; j++){ // Broadcast to all users.
+                        if(j == i || sockfd[j] == 0) continue;
+                        sprintf(sendline, "m:Player %s has left the room.\n\n", userID[i]);
+                        Writen(sockfd[j], sendline, MAXLINE);
+                    }
+                    logout(sockfd[i]);   //logout
+                    sockfd[i] = 0;    //Reset sockfd and id
+                    memset(userID[i], 0, sizeof(userID[i]));
+                }
+            }
+        }
+        
+        // Send control messages
+        if(doneFlag){
+            doneFlag = 0;
+            
+        }
+        
+    }
+    
     
     for(int i = 0;i < 4; i++){  //logout
         logout(userID[i]);
+        close(sockfd[i]);
     }
     return;
 }
@@ -196,8 +255,8 @@ void *waitingRoom(void *argv){
 
         for(int i = 0;i < 4; i++){
             if(FD_ISSET(waitingRoomConnfd[i], &rset)){
-                if(Read(waitingRoomConnfd[i],recvline,MAXLINE) == 0 || recvline[0] == '4'){  //Fin recvd, broadcast to all players in the wating room.
-                    Writen(waitingRoomConnfd[i], "See you next time!\n", MAXLINE);
+                if(Read(waitingRoomConnfd[i], recvline, MAXLINE) == 0 || recvline[0] == '4'){  //Fin recvd, broadcast to all players in the wating room.
+                    Writen(waitingRoomConnfd[i], "See you next time!\n\n", MAXLINE);
                     numOfMember--;
                     close(waitingRoomConnfd[i]);
                     for(int j = 0; j < 4; j++){ // Broadcast to all users.
@@ -239,11 +298,11 @@ void *waitingRoom(void *argv){
                     char tmp[MAXLINE];
                     for(int j = 0; j < 4; j++){
                         if(waitingRoomConnfd[j] == 0){
-                            sprintf(tmp, "P%d : (Empty)\t", j);
+                            sprintf(tmp, "P%d : (Empty)    ", j);
                             strcat(sendline, tmp);
                             continue;
                         }
-                        sprintf(tmp, "P%d : %s\t", j, waitingRoomUserID[j]);
+                        sprintf(tmp, "P%d : %s    ", j, waitingRoomUserID[j]);
                         strcat(sendline, tmp);
                     }
                     strcat(sendline, "\n\n");
@@ -271,7 +330,7 @@ void *waitingRoom(void *argv){
 }    
 */
 
-char* xchg_user_data(int sockfd){  //client ctrl+c not implemented yet
+char* xchg_user_data(int sockfd){   
     char sendline[MAXLINE], recvline[MAXLINE];
     static char ID[MAXLINE];
     // Ask for user data
@@ -280,12 +339,13 @@ char* xchg_user_data(int sockfd){  //client ctrl+c not implemented yet
     CHOOSE:
     Writen(sockfd, "[1] Create a new account\t[2] Login account\n\n", MAXLINE);
     n = Read(sockfd, recvline, MAXLINE);
-    //if(n == 0) goto HANDLE;
+    if(n == 0) goto DISCONNECT;
     if(recvline[0] == '1'){   // Create new account and check the ID exists or not
         NEW:
         char password[MAXLINE], dataPath[MAXLINE], fileContent[MAXLINE];
         Writen(sockfd, "Enter your ID : ", MAXLINE);
-        Read(sockfd, ID, MAXLINE);
+        n = Read(sockfd, ID, MAXLINE);
+        if(n == 0) goto DISCONNECT;
         FILE *f, *check;
         ID[strlen(ID) - 1] = 0;
         sprintf(dataPath, "userdata/%s.txt", ID);
@@ -296,7 +356,8 @@ char* xchg_user_data(int sockfd){  //client ctrl+c not implemented yet
             goto CHOOSE;
         }
         Writen(sockfd, "Enter your password : ", MAXLINE);
-        Read(sockfd, password, MAXLINE);
+        n = Read(sockfd, password, MAXLINE);
+        if(n == 0) goto DISCONNECT;
         printf("ID %s PW %s\n",ID,password);
         f = fopen(dataPath, "w");
         //printf("Seccessful open file\n");
@@ -310,7 +371,8 @@ char* xchg_user_data(int sockfd){  //client ctrl+c not implemented yet
         printf("Login\n");
         char password[MAXLINE], dataPath[MAXLINE], fileContent[MAXLINE];
         Writen(sockfd, "Enter your ID : ", MAXLINE);
-        Read(sockfd, ID, MAXLINE);
+        n = Read(sockfd, ID, MAXLINE);
+        if(n == 0) goto DISCONNECT;
         ID[strlen(ID) - 1] = 0;
         FILE *f;
         sprintf(dataPath, "userdata/%s.txt", ID);
@@ -328,7 +390,8 @@ char* xchg_user_data(int sockfd){  //client ctrl+c not implemented yet
         PW_AGAIN:
         memset(recvline, 0, sizeof(recvline));
         Writen(sockfd, "Enter your password : ", MAXLINE);
-        Read(sockfd, recvline, MAXLINE);
+        n = Read(sockfd, recvline, MAXLINE);
+        if(n == 0) goto DISCONNECT;
         recvline[strlen(recvline) - 1] = '\0';
         if(strcmp(password, recvline) != 0){ 
             Writen(sockfd, "Password is wrong, please try again\n\n", MAXLINE);
@@ -361,10 +424,13 @@ char* xchg_user_data(int sockfd){  //client ctrl+c not implemented yet
     }
     Writen(sockfd, sendline, MAXLINE);
     memset(sendline, 0, MAXLINE);
-    Writen(sockfd, "In the waiting room, you can type to chat with other players.\n\nPress [1] to start a game.\tPress[2] to show your game history.\nPress[3] to show players in waiting room. Press[4] to exit the game.\n\n", MAXLINE);
+    Writen(sockfd, "In the waiting room, you can type to chat with other players.\n\nPress [1] to start a game.\nPress [2] to show your game history.\nPress [3] to show players in waiting room.\nPress [4] to exit the game.\n\n", MAXLINE);
     Close(sockfd);
-    ID[strlen(ID)] = '\0';
     return ID;
+    DISCONNECT:
+    logout(ID);
+    Close(sockfd);
+    return "error";
 }
 
 int logout(char ID[MAXLINE]){
@@ -381,6 +447,15 @@ int logout(char ID[MAXLINE]){
     fprintf(f, fileContent);
     printf("Logout %s successfully.\n", ID);
     fclose(f);
+    return 1;
+}
+
+int dice(int num, char* diceValue[6]){
+    srand(time(NULL));
+    for(int i = 0;i < num; i++){
+        int v = rand() % 6 + 1;
+        *diceValue[i] = v + '0';
+    }
     return 1;
 }
 
