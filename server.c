@@ -162,9 +162,10 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE]){
     for(int i = 0;i < 4; i++){
         if(sockfd[i] == 0) continue;
         Writen(sockfd[i], "Successfully entered a game!\n\n", MAXLINE);
+        Writen(sockfd[i], "1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19\n\n", MAXLINE);
         close(sockfd[i]);
     }
-
+    
     for(int i = 0;i < 4; i++){  //logout
         logout(userID[i]);
     }
