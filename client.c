@@ -113,7 +113,7 @@ void xchg_data(FILE *fp, int sockfd) {
 
             printf("recv: %s", recvline);
 
-            if (strcmp(recvline, "Game start!\n")) {
+            if (strcmp(recvline, "Game start!\n") == 0) {
                 od_clr_scr();
                 draw_title();
                 draw_table();
