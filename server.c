@@ -208,7 +208,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE]){
                         sprintf(sendline, "m:Player %s has left the room.\n\n", userID[i]);
                         Writen(sockfd[j], sendline, MAXLINE);
                     }
-                    logout(sockfd[i]);   //logout
+                    logout(userID[i]);   //logout
                     sockfd[i] = 0;    //Reset sockfd and id
                     memset(userID[i], 0, sizeof(userID[i]));
                 }
