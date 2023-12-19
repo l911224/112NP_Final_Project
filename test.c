@@ -80,50 +80,75 @@ void draw_table() {
     od_disp_str_white("　└─────────────┴─────────────┴──────────┴──────────┴──────────┴──────────┘\r\n");
 }
 
-void draw_sys_msg(int x, int y) {
-    putxy(x     , y, "┌────────────────────────────────────────────────┐", WHITE);
-    putxy(x + 1 , y, "│               System Broadcast                 │", WHITE);
-    putxy(x + 2 , y, "│                                                │", WHITE);
-    putxy(x + 3 , y, "│                                                │", WHITE);
-    putxy(x + 4 , y, "│                                                │", WHITE);
-    putxy(x + 5 , y, "│                                                │", WHITE);
-    putxy(x + 6 , y, "│                                                │", WHITE);
-    putxy(x + 7 , y, "│                                                │", WHITE);
-    putxy(x + 8 , y, "│                                                │", WHITE);
-    putxy(x + 9 , y, "│                                                │", WHITE);
-    putxy(x + 10, y, "│                                                │", WHITE);
-    putxy(x + 11, y, "│                                                │", WHITE);
-    putxy(x + 12, y, "│                                                │", WHITE);
-    putxy(x + 13, y, "│                                                │", WHITE);
-    putxy(x + 14, y, "│                                                │", WHITE);
-    putxy(x + 15, y, "│                                                │", WHITE);
-    putxy(x + 16, y, "│                                                │", WHITE);
-    putxy(x + 17, y, "│                                                │", WHITE);
-    putxy(x + 18, y, "│                                                │", WHITE);
-    putxy(x + 19, y, "│                                                │", WHITE);
-    putxy(x + 19, y, "│                                                │", WHITE);
-    putxy(x + 20, y, "│                                                │", WHITE);
-    putxy(x + 21, y, "│                                                │", WHITE);
-    putxy(x + 22, y, "└────────────────────────────────────────────────┘", WHITE);
+void draw_sys_msg_board(int x, int y) {
+    putxy(x     , y, "┌──────────────────────────────────────────────┐", WHITE);
+    putxy(x + 1 , y, "│                System Message                │", WHITE);
+    putxy(x + 2 , y, "├──────────────────────────────────────────────┤", WHITE);
+    putxy(x + 3 , y, "│                                              │", WHITE);
+    putxy(x + 4 , y, "│                                              │", WHITE);
+    putxy(x + 5 , y, "│                                              │", WHITE);
+    putxy(x + 6 , y, "│                                              │", WHITE);
+    putxy(x + 7 , y, "│                                              │", WHITE);
+    putxy(x + 8 , y, "│                                              │", WHITE);
+    putxy(x + 9 , y, "│                                              │", WHITE);
+    putxy(x + 10, y, "│                                              │", WHITE);
+    putxy(x + 11, y, "│                                              │", WHITE);
+    putxy(x + 12, y, "│                                              │", WHITE);
+    putxy(x + 13, y, "│                                              │", WHITE);
+    putxy(x + 14, y, "│                                              │", WHITE);
+    putxy(x + 15, y, "│                                              │", WHITE);
+    putxy(x + 16, y, "│                                              │", WHITE);
+    putxy(x + 17, y, "│                                              │", WHITE);
+    putxy(x + 18, y, "│                                              │", WHITE);
+    putxy(x + 19, y, "│                                              │", WHITE);
+    putxy(x + 19, y, "│                                              │", WHITE);
+    putxy(x + 20, y, "│                                              │", WHITE);
+    putxy(x + 21, y, "│                                              │", WHITE);
+    putxy(x + 22, y, "│                                              │", WHITE);
+    putxy(x + 23, y, "└──────────────────────────────────────────────┘", WHITE);
 }
 
 
-void draw_cmd(int x, int y) {
+void draw_cmd_board(int x, int y) {
     putxy(x    , y, "┌──────────────────────┐", WHITE);
-    putxy(x + 1, y, "│ [ 1-5 ] Change dices │", WHITE);
-    putxy(x + 2, y, "│ [ ▲ ▼ ] Move         │", WHITE);
-    putxy(x + 3, y, "│ [Enter] Confirm      │", WHITE);
-    putxy(x + 4, y, "│                      │", WHITE);
-    putxy(x + 5, y, "│ [  Q  ] Quit Game    │", WHITE);
-    putxy(x + 6, y, "└──────────────────────┘", WHITE);
+    putxy(x + 1, y, "│ [ 1-5 ] Choose dices │", WHITE);
+    putxy(x + 2, y, "│ [  C  ] Change dices │", WHITE);
+    putxy(x + 3, y, "│ [ ▲/▼ ] Move         │", WHITE);
+    putxy(x + 4, y, "│ [Enter] Fill in      │", WHITE);
+    putxy(x + 5, y, "│                      │", WHITE);
+    putxy(x + 6, y, "│ [  Q  ] Quit Game    │", WHITE);
+    putxy(x + 7, y, "└──────────────────────┘", WHITE);
+}
+
+int line_num = 0, max_length = 45, slide_ptr = 0;
+char *sys_msg[20];
+
+void put_sys_msg(int x, int y, char *str) {
+    slide_ptr = (line_num >= 20) ? (line_num - 20) % 20 : 0;
+    sys_msg[line_num % 20] = str;
+
+    if (line_num < 20) {
+        for (int i = 0; i <= line_num; i++) 
+            putxy(x + i, y, str, RED);
+    } else {
+        for (int i = slide_ptr; i < 20; i++) 
+            putxy(x + i, y, str, RED);
+        for (int i = 0; i < slide_ptr; i++) 
+            putxy(x + i, y, str, RED);
+    }
+    line_num++;
 }
 
 int main(int argc, char **argv) {
     od_clr_scr();
     draw_title(1, 16);
     draw_table();
-    draw_sys_msg(15, 77);
-    draw_cmd(38, 77);
+    draw_sys_msg_board(15, 77);
+    draw_cmd_board(38, 77);
+    od_set_cursor(47, 1);
+    char input[40];
+    scanf("%s", input);
+    put_sys_msg(18, 79, input);
     od_set_cursor(47, 1);
 }
  
