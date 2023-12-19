@@ -317,7 +317,7 @@ void *waitingRoom(void *argv){
                     GAMESTART:
                     for(int j = 0; j < 4; j++){
                         if(waitingRoomConnfd[j] == 0) continue;
-                        Writen(waitingRoomConnfd[j], "Game start!\n\n", MAXLINE);
+                        Writen(waitingRoomConnfd[j], "m:Game start!\n\n", MAXLINE);
                     }
                     startGame = 1;
                     break;
