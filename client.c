@@ -8,6 +8,10 @@
 #define CYAN    "\x1b[;36;1m"
 #define WHITE   "\x1b[;37;1m"
 
+int line_num = 1, slide_ptr = 0, curr_turn = -1;
+char sys_msg[20][45], dice_value[5], roll_dices[5];
+int score_data[4][19];
+
 void od_set_cursor(int x, int y) { printf("\x1B[%d;%dH", x, y); }
 
 void od_clr_scr() { printf("\x1B[2J"); }
@@ -23,6 +27,7 @@ void od_disp_str_white(const char *str)  { printf(WHITE "%s", str); }
 void putxy(int x, int y, const char *str, const char *color) {
     od_set_cursor(x, y);
     printf("%s%s", color, str);
+    od_set_cursor(47, 1);
 }
 
 void draw_title(int x, int y) {
@@ -106,15 +111,12 @@ void draw_sys_msg_board(int x, int y) {
     putxy(x + 23, y, "└──────────────────────────────────────────────┘", WHITE);
 }
 
-int line_num = 0, slide_ptr = 0;
-char sys_msg[20][45];
-
 void put_sys_msg(int x, int y, char *str) {
-    slide_ptr = (line_num >= 20) ? (line_num - 20) % 20 : 0;
-    strcpy(sys_msg[line_num % 20], str);
+    slide_ptr = (line_num > 20) ? (line_num - 20) % 20 : 0;
+    strcpy(sys_msg[(line_num - 1) % 20], str);
 
-    if (line_num < 20) {
-        for (int i = 0; i <= line_num; i++) 
+    if (line_num <= 20) {
+        for (int i = 0; i < line_num; i++) 
             putxy(x + i, y, sys_msg[i], YELLOW);
     } else {
         for (int i = slide_ptr; i < 20; i++) 
@@ -142,6 +144,14 @@ void start_game() {
     draw_table();
     draw_sys_msg_board(14, 77);
     draw_cmd_board(38, 77);
+
+    // initialize
+    line_num = 1;
+    slide_ptr = 0;
+    curr_turn = -1;
+    memset(sys_msg, 0, sizeof(sys_msg));
+    memset(roll_dices, '1', sizeof(roll_dices));
+    memset(score_data, -1, sizeof(score_data));
 }
 
 void xchg_data(FILE *fp, int sockfd) {
@@ -165,16 +175,25 @@ void xchg_data(FILE *fp, int sockfd) {
                     start_game();
 
                 char msg[MAXLINE];
-                sprintf(msg, "[System] %s", recvline + 2);
+                sprintf(msg, "[System] Game start!\n");
                 put_sys_msg(17, 79, msg);
+
+                sprintf(sendline, "r:%s\n", roll_dices);
+                Writen(sockfd, sendline, strlen(sendline));
             }
-            else if (recvline[0] == 's' && recvline[1] == ':') { // system msg
+            // else if (recvline[0] == 's' && recvline[1] == ':') { // score list
+            //     char msg[MAXLINE];
+            //     sprintf(msg, "[System] %s", recvline + 2);
+            //     put_sys_msg(17, 79, msg);
+            // }
+            else if (recvline[0] == 't' && recvline[1] == ':') {
                 char msg[MAXLINE];
-                sprintf(msg, "[System] %s", recvline + 2);
+                sscanf(recvline + 2, "%d\nv:%s\n", &curr_turn, dice_value);
+                sprintf(msg, "[System] Player %d rolled: %c %c %c %c %c\n", curr_turn + 1, dice_value[0], dice_value[1], dice_value[2], dice_value[3], dice_value[4]);
                 put_sys_msg(17, 79, msg);
             }
             else {
-                printf("recv: %s", recvline);
+                printf("%s", recvline);
                 fflush(stdout);
             }
         }
