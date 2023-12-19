@@ -24,6 +24,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE]);
 int logout(char ID[MAXLINE]);
 void dice(char diceToRoll[6], char* diceValue);
 int logoutAll();
+void countScore(char diceValue[6], char ** scoreTable, int turn);
 
 int main(int argc, char **argv){
     // Logout all users
@@ -178,6 +179,7 @@ int main(int argc, char **argv){
 
 /*
     gameRoom control message:
+    t:1 (player 1)
     r:01101(roll dice)
     
 */
@@ -185,9 +187,9 @@ int main(int argc, char **argv){
 
 
 void gameRoom(int sockfd[4], char userID[4][MAXLINE]){
-    printf("gameRoom and \n");
-    char sendline[MAXLINE], recvline[MAXLINE], scoreTable[4][19] = {-1}, diceValue[6] = {0}, diceToRoll[6] = {0};
-    int maxfdp1 = -1, stepCount = 0, turn = 0, doneFlag = 1;
+    char sendline[MAXLINE], recvline[MAXLINE], scoreTable[4][19], diceValue[6] = {0}, diceToRoll[6] = {0};
+    memset(scoreTable, '-1', sizeof(scoreTable));
+    int maxfdp1 = -1, stepCount = 0, turn = 0, oneTurnDoneFlag = 1;
     fd_set rset;
     FD_ZERO(&rset);
     int numOfPlayer = 0;
@@ -234,10 +236,9 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE]){
                 else if(recvline[0] == 'r' && recvline[1] == ':'){  //r:01101 means to roll NO.2 3 5 dices
                     sscanf(recvline, "%*[^:]:%s\n", diceToRoll);
                     diceToRoll[5] = '\0';
-                    printf("ready to roll:%s\n", diceToRoll);
                     dice(diceToRoll, &diceValue);
                     sprintf(sendline, "t:%d\nv:%s\n", turn, diceValue);
-                    printf("rolled:%s\n", diceValue);
+                    printf("Rolled: %s\n", diceValue);
                     for(int j = 0; j < 4; j++){
                         if(sockfd[j] == 0) continue;
                         Writen(sockfd[j], sendline, MAXLINE);
@@ -247,17 +248,24 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE]){
         }
         
         // Send control messages
-        // if(doneFlag){
-        //     doneFlag = 0;
-        //     memset(diceValue, 0, sizeof(diceValue));
-        //     dice(diceToRoll, &diceValue);
-        //     printf("dice rolled : %s\n", diceValue);
-        //     sprintf(sendline, "t:%d\nv:%s\n", turn, diceValue);
-        //     for(int i = 0; i < 4; i++){
-        //         if(sockfd[i] == 0) continue;
-        //         Writen(sockfd[i], sendline, MAXLINE);
-        //     }
-        // }
+        NEXTTURN:
+        if(oneTurnDoneFlag){    // Start a new turn
+            stepCount++;
+            turn++;
+            if(turn == 4) turn = 0;
+
+            if(sockfd[turn] == 0) goto NEXTTURN;    // No player, go to next turn
+
+            oneTurnDoneFlag = 0;
+            memset(diceValue, 0, sizeof(diceValue));
+            memset(diceToRoll, 0, sizeof(diceToRoll));
+            dice("11111", &diceValue);
+            sprintf(sendline, "t:%d\nv:%s\n", turn, diceValue);
+            for(int i = 0; i < 4; i++){
+                if(sockfd[i] == 0) continue;
+                Writen(sockfd[i], sendline, MAXLINE);
+            }
+        }
         
     }
     
@@ -317,7 +325,7 @@ void *waitingRoom(void *argv){
                     GAMESTART:
                     for(int j = 0; j < 4; j++){
                         if(waitingRoomConnfd[j] == 0) continue;
-                        Writen(waitingRoomConnfd[j], "Game start!\n\n", MAXLINE);
+                        Writen(waitingRoomConnfd[j], "m:Game start!\n\n", MAXLINE);
                     }
                     startGame = 1;
                     break;
@@ -504,7 +512,7 @@ void dice(char diceToRoll[6], char* diceValue){
         int v = rand() % 6 + 1;
         *(diceValue + i) = v + '0';
     }
-    *(diceValue+ 5) = '\0';
+    *(diceValue + 5) = '\0';
     printf("rolled successfully\n");
 }
 
@@ -533,4 +541,13 @@ int logoutAll(){
         return -1;
     }
     return 1;
+}
+
+void countScore(char diceValue[6], char ** scoreTable, int turn){
+    int tmp = 0;
+    //Ace
+    for(int i = 0;i < 5; i++){
+        if(diceValue[i] == '1') tmp += 1;
+    }
+    scoreTable[0][]
 }
