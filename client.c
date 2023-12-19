@@ -161,7 +161,6 @@ void xchg_data(FILE *fp, int sockfd) {
             if (Read(sockfd, recvline, MAXLINE) == 0) return;
 
             if (recvline[0] == 'm' && recvline[1] == ':') { // system msg
-
                 if (strcmp(recvline + 2, "Game start!\n\n") == 0) 
                     start_game();
 
@@ -206,5 +205,3 @@ int main(int argc, char **argv) {
 
     exit(0);
 }
-
-
