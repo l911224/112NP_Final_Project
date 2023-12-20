@@ -122,8 +122,8 @@ void put_sys_msg(char *str) {
     for (int i = slide_ptr; i < 15; i++) 
         od_disp_str_yellow(sys_msg[i]);
 
-    for (int i = 0; i < slide_ptr; i++) 
-        od_disp_str_yellow(sys_msg[i]);
+    // for (int i = 0; i < slide_ptr; i++) 
+    //     od_disp_str_yellow(sys_msg[i]);
     
     line_num++;
 }
@@ -183,6 +183,7 @@ void xchg_data(FILE *fp, int sockfd) {
                 char msg[MAXLINE];
                 sprintf(msg, "[System] Game start!\n");
                 put_sys_msg(msg);
+                od_set_cursor(73, 1);
             }
             // else if (recvline[0] == 's' && recvline[1] == ':') { // score list
             //     char msg[MAXLINE];
