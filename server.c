@@ -190,7 +190,7 @@ int main(int argc, char **argv){
 
 void gameRoom(int sockfd[4], char userID[4][MAXLINE]){
     char sendline[MAXLINE], recvline[MAXLINE], diceValue[6] = {0}, diceToRoll[6] = {0};
-    int maxfdp1 = -1, stepCount = -1, turn = -1, oneTurnDoneFlag = 1, scoreTable[19], totalScoreTable[4][19];
+    int maxfdp1 = -1, stepCount = -1, turn = -1, oneTurnDoneFlag = 1, scoreTable[19], totalScoreTable[4][19], first = 1;
     memset(totalScoreTable, -1, sizeof(totalScoreTable));
     memset(scoreTable, -1, sizeof(scoreTable));
     //Initialize yahtzee bonus
@@ -202,10 +202,12 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE]){
     FD_ZERO(&rset);
     int numOfPlayer = 0;
     for(;;){
+        if(first) goto NEXTTURN;
         // Fd set
         memset(sendline, 0, sizeof(sendline));
         memset(recvline, 0, sizeof(recvline));
         numOfPlayer = 0;
+        maxfdp1 = -1;
         for(int i = 0;i < 4; i++){
             if(sockfd[i] == 0) continue;
             FD_SET(sockfd[i], &rset);
@@ -348,6 +350,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE]){
         
         // Send control messages
         NEXTTURN:
+        first = 0;
         if(oneTurnDoneFlag){    // Start a new turn
             stepCount++;
             // Check game status
@@ -402,7 +405,7 @@ void *waitingRoom(void *argv){
     fd_set rset;
     FD_ZERO(&rset);
     for(;;){
-        if(numOfMember == 3) goto GAMESTART;
+        if(numOfMember == 4) goto GAMESTART;
         maxfdp1 = -1;
         FD_ZERO(&rset);
         memset(sendline, 0, sizeof(sendline));
@@ -422,7 +425,8 @@ void *waitingRoom(void *argv){
         for(int i = 0;i < 4; i++){
             if(FD_ISSET(waitingRoomConnfd[i], &rset)){
                 printf("got message in waiting room\n");
-                if(Read(waitingRoomConnfd[i], recvline, MAXLINE) == 0 || recvline[0] == '4'){  //Fin recvd, broadcast to all players in the wating room.
+                memset(recvline, 0, sizeof(recvline));
+                if(Read(waitingRoomConnfd[i], recvline, MAXLINE) == 0 || !strcmp(recvline,"4\n")){  //Fin recvd, broadcast to all players in the wating room.
                     Writen(waitingRoomConnfd[i], "See you next time!\n\n", MAXLINE);
                     numOfMember--;
                     Close(waitingRoomConnfd[i]);
@@ -436,7 +440,7 @@ void *waitingRoom(void *argv){
                     memset(waitingRoomUserID[i], 0, sizeof(waitingRoomUserID[i]));
                     continue;
                 }
-                else if(recvline[0] == '1'){    // Start a game.
+                else if(!strcmp(recvline,"1\n")){    // Start a game.
                     if(numOfMember < 2){    // Check player number is enough or not 
                         Writen(waitingRoomConnfd[i], "Number of players are not enuogh. Wait for 1-3 more players to start!\n\n", MAXLINE);
                         continue;
@@ -449,7 +453,7 @@ void *waitingRoom(void *argv){
                     startGame = 1;
                     break;
                 }
-                else if(recvline[0] == '2'){    // Show game history
+                else if(!strcmp(recvline,"2\n")){    // Show game history
                     char dataPath[MAXLINE], password[MAXLINE];
                     int twoWin, twoPlayed, threeWin, threePlayed, fourWin, fourPlayed, Using;
                     sprintf(dataPath, "userdata/%s.txt", waitingRoomUserID[i]);
@@ -462,7 +466,7 @@ void *waitingRoom(void *argv){
                     Writen(waitingRoomConnfd[i], sendline, MAXLINE);
                     continue;
                 }
-                else if(recvline[0] == '3'){
+                else if(!strcmp(recvline,"3\n")){
                     char tmp[MAXLINE];
                     for(int j = 0; j < 4; j++){
                         if(waitingRoomConnfd[j] == 0){
@@ -505,10 +509,11 @@ char* xchg_user_data(int sockfd){
     int n;
     Writen(sockfd, "Welcome to Yahtzee!\n\n", MAXLINE);
     CHOOSE:
+    memset(recvline, 0, sizeof(recvline));
     Writen(sockfd, "[1] Create a new account\t[2] Login account\n\n", MAXLINE);
     n = Read(sockfd, recvline, MAXLINE);
     if(n == 0) goto DISCONNECT;
-    if(recvline[0] == '1'){   // Create new account and check the ID exists or not
+    if(!strcmp(recvline,"1\n")){   // Create new account and check the ID exists or not
         NEW:
         char password[MAXLINE], dataPath[MAXLINE], fileContent[MAXLINE];
         Writen(sockfd, "Enter your ID : ", MAXLINE);
@@ -540,7 +545,7 @@ char* xchg_user_data(int sockfd){
         Writen(sockfd, "\nCreate successfully!\n\n", MAXLINE);
         fclose(f);
     }
-    else if(recvline[0] == '2'){  // Login account and show winning rate
+    else if(!strcmp(recvline,"2\n")){  // Login account and show winning rate
         LOGIN:
         printf("Login\n");
         char password[MAXLINE], dataPath[MAXLINE], fileContent[MAXLINE];
