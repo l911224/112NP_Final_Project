@@ -242,6 +242,15 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE]){
                     memset(userID[i], 0, sizeof(userID[i]));
                 }
                 else if(recvline[0] == 'r' && recvline[1] == ':'){  //r:01101 means to roll NO.2 3 5 dices
+                    // Check player legal or not
+                    if(i != turn){
+                        sprintf(sendline, "w:Operation illegal.It is player %d turn.\n", turn + 1);
+                        for(int j = 0; j < 4; j++){
+                            if(sockfd[j] == 0) continue;
+                            Writen(sockfd[j], sendline, MAXLINE);
+                        }
+                        continue;
+                    }
                     sscanf(recvline, "%*[^:]:%s\n", diceToRoll);
                     diceToRoll[5] = '\0';
                     memset(scoreTable, -1, sizeof(scoreTable));
@@ -251,7 +260,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE]){
                     char sendScore[MAXLINE] = {0};
                     for(int j = 0; j < 19; j++){    //sendScore like : 1,2,3,4,5,6,7,8,-1,-1,0,0,-1,-1,0,0,12,13,-1
                         char tmp[30];
-                        scoreTable[j] = (totalScoreTable[turn][j] != -1 || totalScoreTable[turn][j] == 0) ? -1 : scoreTable[j];   //-1 means the table has been filled or do not need to print
+                        scoreTable[j] = (totalScoreTable[turn][j] != -1) ? -1 : scoreTable[j];   //-1 means the table has been filled or do not need to print
                         sprintf(tmp, "%d,", scoreTable[j]);
                         strcat(sendScore, tmp);
                     }
@@ -264,9 +273,18 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE]){
                     }
                 }
                 else if(recvline[0] == 'd' && recvline[1] == ':'){  //d:10 fill the 10th table
+                    // Check player legal or not
+                    if(i != turn){
+                        sprintf(sendline, "w:Operation illegal. It is player %d's turn.\n", turn + 1);
+                        for(int j = 0; j < 4; j++){
+                            if(sockfd[j] == 0) continue;
+                            Writen(sockfd[j], sendline, MAXLINE);
+                        }
+                        continue;
+                    }
                     int toFill = 0;
                     sscanf(recvline, "%*[^:]:%d\n", &toFill);
-                    if(totalScoreTable[turn][toFill] != -1){    //Illegal operation
+                    if(totalScoreTable[turn][toFill] != -1 || toFill == 6 || toFill == 7 || toFill == 8 || toFill == 16 || toFill == 17 || toFill == 18){    //Illegal operation
                         Writen(sockfd[i], "w:Illegal operation!\n", MAXLINE);
                     }
                     else{   //Fill the totalScoreTable
@@ -274,7 +292,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE]){
                         oneTurnDoneFlag = 1;
                         //Check players totalScoreTable bonus 
                         //Yahtzee bonus
-                        if(scoreTable[14] == 50 && totalScoreTable[turn][14] != 0){
+                        if(scoreTable[14] == 50 && totalScoreTable[turn][14] != -1){
                             totalScoreTable[turn][16] += 100;
                         }
                         //Upper section
@@ -293,7 +311,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE]){
                         }
                         //Lower section
                         flag = 1, sum = 0;
-                        for(int j = 9; j < 16; j++){
+                        for(int j = 9; j < 17; j++){
                             if(totalScoreTable[turn][j] == -1){ 
                                 flag = 0;
                                 break;
@@ -303,6 +321,25 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE]){
                         if(flag){
                             totalScoreTable[turn][17] = sum;
                             totalScoreTable[turn][18] = (totalScoreTable[turn][8] != -1) ? totalScoreTable[turn][17] + totalScoreTable[turn][8] : -1;
+                        }
+
+                        //Send current score table to all players
+                        char sendScore[MAXLINE] = {0};
+                        for(int j = 0; j < 4; j++){    //sendScore like : 1,2,3,4,5,6,7,8,-1,-1,0,0,-1,-1,0,0,12,13,-1
+                            if(sockfd[j] == 0) continue;
+                            char n[30];
+                            sprintf(n, "Player %d: ", j);
+                            strcat(sendScore, n);
+                            for(int k = 0;k < 19; k++){
+                                char tmp[30];
+                                sprintf(tmp, "%d,", totalScoreTable[j][k]);
+                                strcat(sendScore, tmp);
+                            }
+                            sendScore[strlen(sendScore) - 1] = '\n';
+                        }
+                        for(int j = 0; j < 4; j++){
+                            if(sockfd[j] == 0) continue;
+                            Writen(sockfd[j], sendScore, MAXLINE);
                         }
                     }
                 }
@@ -333,15 +370,13 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE]){
             dice("11111", &diceValue);
             printf("Rolled : %s\n", diceValue);
             countScore(diceValue, scoreTable);
-            printf("countScore success\n");
             char sendScore[MAXLINE] = {0};
             for(int i = 0; i < 19; i++){    //sendScore like : 1,2,3,4,5,6,7,8,-1,-1,0,0,-1,-1,0,0,12,13,-1
                 char tmp[30];
-                scoreTable[i] = (totalScoreTable[turn][i] != -1 || totalScoreTable[turn][i] == 0) ? -1 : scoreTable[i];  //-1 means the table has been filled or do not need to print
+                scoreTable[i] = (totalScoreTable[turn][i] != -1) ? -1 : scoreTable[i];  //-1 means the table has been filled or do not need to print
                 sprintf(tmp, "%d,", scoreTable[i]);
                 strcat(sendScore, tmp);
             }
-            printf("strcat success\n");
             sendScore[strlen(sendScore) - 1] = 0;
             sprintf(sendline, "t:%d\nv:%s\ns:%s\n", turn, diceValue, sendScore);
             printf("sendScore success\n");
@@ -633,52 +668,52 @@ void countScore(char diceValue[6], int * scoreTable){
     for(int i = 0;i < 5; i++){
         count[(int)diceValue[i] - '0']++;
     }
-    for(int i = 1; i < 6; i++){
+    for(int i = 1; i < 7; i++){
         printf("%d ", count[i]);
     }
-    printf("\ntest1\n");
+
     //Aces
     tmp = 0;
     for(int i = 0;i < 5; i++){
         if(diceValue[i] == '1') tmp += 1;
     }
     scoreTable[0] = tmp;
-    printf("test2\n");
+
     //Twos
     tmp = 0;
     for(int i = 0;i < 5; i++){
         if(diceValue[i] == '2') tmp += 2;
     }
     scoreTable[1] = tmp;
-    printf("test3\n");
+
     //Threes
     tmp = 0;
     for(int i = 0;i < 5; i++){
         if(diceValue[i] == '3') tmp += 3;
     }
     scoreTable[2] = tmp;
-    printf("test4\n");
+
     //Fours
     tmp = 0;
     for(int i = 0;i < 5; i++){
         if(diceValue[i] == '4') tmp += 4;
     }
     scoreTable[3] = tmp;
-    printf("test5\n");
+
     //Fives
     tmp = 0;
     for(int i = 0;i < 5; i++){
         if(diceValue[i] == '5') tmp += 5;
     }
     scoreTable[4] = tmp;
-    printf("test6\n");
+
     //Sixes
     tmp = 0;
     for(int i = 0;i < 5; i++){
         if(diceValue[i] == '6') tmp += 6;
     }
     scoreTable[5] = tmp;
-    printf("test7\n");
+
 
     //3 of a kind
     tmp = 0;
@@ -695,7 +730,7 @@ void countScore(char diceValue[6], int * scoreTable){
     else{
         scoreTable[9] = 0;
     }
-    printf("test8\n");
+
     //4 of a kind
     tmp = 0;
     flag = 0;
@@ -711,7 +746,6 @@ void countScore(char diceValue[6], int * scoreTable){
     else{
         scoreTable[10] = 0;
     }
-    printf("test9\n");
     //Full house
     tmp = 0;
     int twoFlag = 0, threeFlag = 0;
@@ -725,7 +759,6 @@ void countScore(char diceValue[6], int * scoreTable){
     else{
         scoreTable[11] = 0;
     }
-    printf("test10\n");
     //Small straight
     tmp = 0;
     int countZero = 0;
@@ -737,7 +770,6 @@ void countScore(char diceValue[6], int * scoreTable){
     flag = (countZero > 1) ? 0 : 1;
     if(flag) scoreTable[12] = tmp;
     else scoreTable[12] = 0;
-    printf("test11\n");
     //Large straight
     tmp = 0;
     countZero = 0;
@@ -749,7 +781,6 @@ void countScore(char diceValue[6], int * scoreTable){
     flag = (countZero > 0) ? 0 : 1;
     if(flag) scoreTable[13] = tmp;
     else scoreTable[13] = 0;
-    printf("test12\n");
     //Yahtzee
     tmp = 0;
     flag = 0;
@@ -762,7 +793,6 @@ void countScore(char diceValue[6], int * scoreTable){
     }
     if(flag) scoreTable[14] = 50;
     else scoreTable[14] = 0;
-    printf("test13\n");
     //Change
     tmp = 0;
     for(int i = 1; i < 7; i++){

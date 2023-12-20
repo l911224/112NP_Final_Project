@@ -189,12 +189,12 @@ void xchg_data(FILE *fp, int sockfd) {
             //     sprintf(msg, "[System] %s", recvline + 2);
             //     put_sys_msg(17, 79, msg);
             // }
-            else if (recvline[0] == 't' && recvline[1] == ':') { // turn & dice value
-                char msg[MAXLINE];
-                sscanf(recvline + 2, "%d\nv:%s\n", &curr_turn, dice_value);
-                sprintf(msg, "[System] Player %d rolled: %c %c %c %c %c\n", curr_turn + 1, dice_value[0], dice_value[1], dice_value[2], dice_value[3], dice_value[4]);
-                put_sys_msg(msg);
-            }
+            // else if (recvline[0] == 't' && recvline[1] == ':') { // turn & dice value
+            //     char msg[MAXLINE], scoreTable[MAXLINE];
+            //     sscanf(recvline + 2, "%d\nv:%s\ns:%s\n", &curr_turn, dice_value, scoreTable);
+            //     sprintf(msg, "[System] Player %d rolled: %c %c %c %c %c\nScore can fill: %s\n", curr_turn + 1, dice_value[0], dice_value[1], dice_value[2], dice_value[3], dice_value[4], scoreTable);
+            //     put_sys_msg(msg);
+            // }
             else {
                 printf("recv: %s", recvline);
                 fflush(stdout);
