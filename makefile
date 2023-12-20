@@ -10,5 +10,3 @@ server:	server.o
 
 test:	test.o
 		${CC} ${CFLAGS} -o $@ test.o ${LIBS}
-cli:	cli.o
-		${CC} ${CFLAGS} -o $@ cli.o ${LIBS}
