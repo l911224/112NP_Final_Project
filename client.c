@@ -279,16 +279,27 @@ void fill_score_data(char *score) {
     }
 }
 
-void print_score_data(char *score) {
+void print_score_data(int turn, char *score, int selecting) {
     char *data = strtok(score, ",");
     int pos = 0;
 
     while (data != NULL) {
-        if (pos == 9) pos = 10; // skip "LOWER　SECTION" row
-        putxy(7 + 2 * pos++, 36 + 11 * curr_turn, data, GREEN);
+        char formattedData[3];
+
+        if (pos == 9) pos = 10; // skip "LOWER SECTION" row
+
+        if (strlen(data) == 1) sprintf(formattedData, " %s", data);
+        else if (data[0] == '-') sprintf(formattedData, " ");
+        else strcpy(formattedData, data);
+
+        if (!selecting && data[0] == '0') sprintf(formattedData, "   ");
+
+        putxy(7 + 2 * pos++, 36 + 11 * turn, formattedData, GREEN);
         data = strtok(NULL, ",");
     }
+    od_set_cursor(47, 1);
 }
+
 
 void xchg_data(FILE *fp, int sockfd) {
     int maxfdp1;
@@ -326,10 +337,21 @@ void xchg_data(FILE *fp, int sockfd) {
                 for (int i = 0; i < 5; i++) draw_dice_content(i + 1, dice_value[i] - '0', WHITE);
                 sprintf(msg, "Player %d rolled: %c %c %c %c %c\n", curr_turn + 1, dice_value[0], dice_value[1], dice_value[2], dice_value[3], dice_value[4]);
                 put_sys_msg(msg);
-                print_score_data(scoreTable);
+                print_score_data(curr_turn, scoreTable, 1);
+                //getch
             }
             else if (recvline[0] == 'a' && recvline[1] == ':') { // all table
-                
+                char scoreTable[4][MAXLINE];
+                int pos = 0, tmp;
+
+                strcpy(msg, recvline + 2);
+                char *data = strtok(msg, "\n");
+                printf("%s!!!\n", data);
+                while (data != NULL) {
+                    print_score_data(pos, scoreTable[pos], 0);
+                    data = strtok(NULL, "\n");
+                    pos++;
+                }
             }
             else {
                 printf("recv: %s", recvline);
