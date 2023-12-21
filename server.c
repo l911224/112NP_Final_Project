@@ -313,6 +313,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         logout(userID[i]);  // logout
                         sockfd[i] = 0;      // Reset sockfd and id
                         memset(userID[i], 0, sizeof(userID[i]));
+                        continue;
                     } else if (recvline[0] == 'r' && recvline[1] == ':') {  // r:01101 means to roll NO.2 3 5 dices
                         // Check player legal or not
                         if (i != turn) {
@@ -865,27 +866,18 @@ void countScore(char diceValue[6], int *scoreTable) {
         scoreTable[11] = 0;
     }
     // Small straight
-    tmp = 0;
-    int countZero = 0;
     flag = 0;
-    for (int i = 1; i < 7; i++) {
-        if (count[i] == 0) countZero++;
-        tmp += count[i] * i;
-    }
-    flag = (countZero > 2) ? 0 : 1;
+    if((count[1] >= 1 && count[2] >= 1 && count[3] >= 1 && count[4] >= 1) || (count[2] >= 1 && count[3] >= 1 && count[4] >= 1 && count[5] >= 1) || (count[3] >= 1 && count[4] >= 1 && count[5] >= 1 && count[6] >= 1)) flag = 1;
     if (flag)
         scoreTable[12] = 30;
     else
         scoreTable[12] = 0;
     // Large straight
-    tmp = 0;
-    countZero = 0;
     flag = 0;
     for (int i = 1; i < 7; i++) {
-        if (count[i] == 0) countZero++;
-        tmp += count[i] * i;
+        if (count[i] == 0 && i == 1 || count[i] == 0 && i == 6) flag = 1;
     }
-    flag = (countZero > 1) ? 0 : 1;
+
     if (flag)
         scoreTable[13] = 40;
     else
