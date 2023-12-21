@@ -156,8 +156,7 @@ int main(int argc, char **argv) {
             char sendline[MAXLINE];
             // Broadcast to all players
             sprintf(sendline, "%s entered the waiting room. There are %d players waiting now.\n\nIn the waiting room, you can type to chat with other players.\n\nPress [1] to start a game.\nPress [2] to show your game history.\nPress [3] to show players in waiting room.\nPress [4]"
-            "to exit the game.\n\n", IDBuffer, numOfMember);
-            printf("%s", sendline);
+            " to exit the game.\n\n", IDBuffer, numOfMember);
             for (int i = 0; i < 4; i++) {
                 if (waitingRoomConnfd[i] == 0 || i == freeSpace) continue;
                 Writen(waitingRoomConnfd[i], sendline, MAXLINE);
@@ -422,7 +421,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
     // Send control messages
     NEXTTURN:
         first = 0;
-        if (oneTurnDoneFlag) {  // Start a new turn
+        if (oneTurnDoneFlag && !endGame) {  // Start a new turn
             memset(sendline, 0, sizeof(sendline));
             stepCount++;
             // Check game status
@@ -703,8 +702,8 @@ CHOOSE:
     Writen(sockfd, sendline, MAXLINE);
     memset(sendline, 0, MAXLINE);
     Writen(sockfd,
-           "In the waiting room, you can type to chat with other players.\n\nPress [1] to start a game.\nPress [2] to show your game history.\nPress [3] to show players in waiting room.\nPress [4] "
-           "to exit the game.\n\n",
+           "In the waiting room, you can type to chat with other players.\n\nPress [1] to start a game.\nPress [2] to show your game history.\nPress [3] to show players in waiting room.\nPress [4]"
+           " to exit the game.\n\n",
            MAXLINE);
     Close(sockfd);
     return ID;
