@@ -11,6 +11,7 @@
 
 int line_num = 0, slide_ptr = 0, curr_turn = -1, player_num;
 char sys_msg[15][44], dice_value[5], roll_dices[5];
+struct timeval timeout = {0, 100};
 
 void od_set_cursor(int x, int y) { 
     printf("\x1B[%d;%dH", x, y); 
@@ -27,7 +28,7 @@ void od_disp_str_purple(const char *str) { printf(PURPLE "%s", str); }
 void od_disp_str_cyan(const char *str)   { printf(CYAN "%s", str); }
 void od_disp_str_white(const char *str)  { printf(WHITE "%s", str); }
 
-int getch(void) {
+int getch() {
     int ch;
     struct termios oldt, newt;
 
@@ -282,35 +283,10 @@ void print_score_data(int turn, char *score) {
     od_set_cursor(47, 1);
 }
 
-char *wait_cmd() {
-    int key, dice_chosen[5] = {0};
-    char ret[MAXLINE];
-
-    while(1){
-        if (curr_turn != player_num) continue; 
-
-        while ((key = getch()) == 0)
-            ;
-            
-        switch (key) {
-            case '1':
-            case '2':
-            case '3':
-            case '4':
-            case '5':
-                draw_dice_content(key - '0', dice_value[key - '0' - 1] - '0', dice_chosen[key - '0' - 1] ? WHITE : RED);
-                dice_chosen[key - '0' - 1] = dice_chosen[key - '0' - 1] ? 0 : 1;
-                break;
-            case 'c':
-            case 'C':
-
-        }
-    }
-}
-
 void xchg_data(FILE *fp, int sockfd) {
     int maxfdp1;
     char sendline[MAXLINE], recvline[MAXLINE], msg[MAXLINE];
+    int key, dice_chosen[5] = {0}, wait_flag = 0;
 
     fd_set rset;
     FD_ZERO(&rset);
@@ -319,7 +295,7 @@ void xchg_data(FILE *fp, int sockfd) {
         FD_SET(fileno(fp), &rset);
         FD_SET(sockfd, &rset);
         maxfdp1 = max(fileno(fp), sockfd) + 1;
-        Select(maxfdp1, &rset, NULL, NULL, NULL);
+        Select(maxfdp1, &rset, NULL, NULL, &timeout);
 
         memset(sendline, 0 ,sizeof(sendline));
         memset(recvline, 0 ,sizeof(recvline));
@@ -352,7 +328,7 @@ void xchg_data(FILE *fp, int sockfd) {
                 sprintf(msg, "Player %d rolled: %c %c %c %c %c\n", curr_turn + 1, dice_value[0], dice_value[1], dice_value[2], dice_value[3], dice_value[4]);
                 put_sys_msg(msg);
                 print_score_data(curr_turn, scoreTable);
-                wait_cmd();
+                wait_flag = 1;
             }
             else if (recvline[0] == 'a' && recvline[1] == ':') { // all table
                 char scoreTable[4][MAXLINE];
@@ -376,6 +352,25 @@ void xchg_data(FILE *fp, int sockfd) {
         if (FD_ISSET(fileno(fp), &rset)) {
             if (Fgets(sendline, MAXLINE, fp) == NULL) return;
             Writen(sockfd, sendline, strlen(sendline));
+        }
+
+        if (wait_flag) {
+            while ((key = getch()) == 0)
+                ;
+                
+            switch (key) {
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                    draw_dice_content(key - '0', dice_value[key - '0' - 1] - '0', dice_chosen[key - '0' - 1] ? WHITE : RED);
+                    dice_chosen[key - '0' - 1] = dice_chosen[key - '0' - 1] ? 0 : 1;
+                    break;
+                case 'c':
+                case 'C':
+                    wait_flag = 0;
+            }
         }
     }
 }
