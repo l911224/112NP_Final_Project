@@ -10,7 +10,7 @@
 #define WHITE   "\x1b[;37;1m"
 
 int line_num = 1, slide_ptr = 0, curr_turn = -1, player_num;
-char sys_msg[15][512], dice_value[5], roll_dices[5];
+char sys_msg[15][44], dice_value[5], roll_dices[5];
 int score_data[4][19];
 
 void od_set_cursor(int x, int y) { 
@@ -221,17 +221,22 @@ void put_sys_msg(char *str) {
     int index = line_num % 15;
     line_num++;
 
-    memset(sys_msg[index], ' ', sizeof(sys_msg[index]) - 1);
-    sys_msg[index][sizeof(sys_msg[index]) - 1] = '\0';
     strncpy(sys_msg[index], str, sizeof(sys_msg[index]) - 1);
+    sys_msg[index][sizeof(sys_msg[index]) - 1] = '\0';
 
     int start = line_num > 15 ? line_num % 15 : 0;
+
     for (int i = 0; i < 15; i++) {
         int idx = (start + i) % 15;
-        // putxy(22 + i, 79, sys_msg[idx], YELLOW);
+        putxy(22 + i, 79, "                                          ", YELLOW);
+        putxy(22 + i, 79, sys_msg[idx], YELLOW);
     }
+
     od_set_cursor(47, 1);
 }
+
+
+
 
 
 void draw_cmd_board(int x, int y) {
