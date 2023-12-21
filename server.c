@@ -874,9 +874,7 @@ void countScore(char diceValue[6], int *scoreTable) {
         scoreTable[12] = 0;
     // Large straight
     flag = 0;
-    for (int i = 1; i < 7; i++) {
-        if (count[i] == 0 && i == 1 || count[i] == 0 && i == 6) flag = 1;
-    }
+    if((count[1] == 1 && count[2] == 1 && count[3] == 1 && count[4] == 1 && count[5] == 1) || (count[6] == 1 && count[2] == 1 && count[3] == 1 && count[4] == 1 && count[5] == 1)) flag = 1;
 
     if (flag)
         scoreTable[13] = 40;
