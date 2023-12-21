@@ -21,7 +21,7 @@ struct timeval timeout = {0, 100};
 void sigchld_handler(int signo);
 char *xchg_user_data(int sockfd);
 void *waitingRoom(void *argv);
-void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addSockfd, char *IDBuffer);
+void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addSockfd, char *IDBuffer, int *disconnect);
 int logout(char ID[MAXLINE]);
 void dice(char diceToRoll[6], char *diceValue);
 int logoutAll();
@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
     char userID[20][MAXLINE];
     socklen_t clilen[20];
     // Shared memory set
-    int shmFlag = 0, shmUserID = 0, shmAdd;
+    int shmFlag = 0, shmUserID = 0, shmAdd = 0, shmDis = 0;
     if ((shmFlag = shmget(IPC_PRIVATE, sizeof(int) * 1, IPC_CREAT | 0666)) < 0) {
         perror("shmget");
         exit(1);
@@ -48,18 +48,26 @@ int main(int argc, char **argv) {
         perror("shmget");
         exit(1);
     }
+    if ((shmDis = shmget(IPC_PRIVATE, sizeof(int) * 1, IPC_CREAT | 0666)) < 0) {
+        perror("shmget");
+        exit(1);
+    }
     if ((shmUserID = shmget(IPC_PRIVATE, sizeof(char) * MAXLINE, IPC_CREAT | 0666)) < 0) {
         perror("shmget");
         exit(1);
     }
-    int *connfdFlag = NULL, *addSockfd = NULL;
+    int *connfdFlag = NULL, *addSockfd = NULL, *disconnect = NULL;
     char *IDBuffer = NULL;
     // Attach the shm
-    if ((connfdFlag = (int *)shmat(shmFlag, NULL, 0)) == -1) {
+    if ((connfdFlag = (int*)shmat(shmFlag, NULL, 0)) == -1) {
         perror("shmat");
         exit(1);
     }
-    if ((addSockfd = (int *)shmat(shmAdd, NULL, 0)) == -1) {
+    if ((addSockfd = (int*)shmat(shmAdd, NULL, 0)) == -1) {
+        perror("shmat");
+        exit(1);
+    }
+    if ((disconnect = (int*)shmat(shmDis, NULL, 0)) == -1) {
         perror("shmat");
         exit(1);
     }
@@ -67,8 +75,9 @@ int main(int argc, char **argv) {
         perror("shmat");
         exit(1);
     }
-    *addSockfd = -1;
     // Initialize shared matrix C
+    *addSockfd = -1;
+    *disconnect = -1;
     *connfdFlag = -10;
     memset(IDBuffer, 0, sizeof(char[MAXLINE]));
     // Create listening socket
@@ -96,10 +105,11 @@ int main(int argc, char **argv) {
         if (startGame) {        // Start a game
             if (Fork() == 0) {  // Fork child process to start a game
                 Close(listenfd);
-                gameRoom(waitingRoomConnfd, waitingRoomUserID, connfdFlag, addSockfd, IDBuffer);
+                gameRoom(waitingRoomConnfd, waitingRoomUserID, connfdFlag, addSockfd, IDBuffer, disconnect);
                 shmdt(connfdFlag);
                 shmdt(IDBuffer);
                 shmdt(addSockfd);
+                shmdt(disconnect);
                 exit(0);
             }
             startGame = 0;
@@ -111,6 +121,12 @@ int main(int argc, char **argv) {
             memset(cliaddr, 0, sizeof(cliaddr));
             memset(clilen, 0, sizeof(clilen));
             printf("memset done\n");
+            continue;
+        }
+        //Disconnect client who wants to exit
+        if(*disconnect != -1){
+            Close(*disconnect);
+            *disconnect = -1;
             continue;
         }
 
@@ -139,7 +155,8 @@ int main(int argc, char **argv) {
             numOfMember++;
             char sendline[MAXLINE];
             // Broadcast to all players
-            sprintf(sendline, "%s entered the room.\tThere are %d players waiting now.\n\n", IDBuffer, numOfMember);
+            sprintf(sendline, "%s entered the waiting room. There are %d players waiting now.\n\nIn the waiting room, you can type to chat with other players.\n\nPress [1] to start a game.\nPress [2] to show your game history.\nPress [3] to show players in waiting room.\nPress [4]"
+            "to exit the game.\n\n", IDBuffer, numOfMember);
             printf("%s", sendline);
             for (int i = 0; i < 4; i++) {
                 if (waitingRoomConnfd[i] == 0 || i == freeSpace) continue;
@@ -193,6 +210,7 @@ int main(int argc, char **argv) {
                 printf("Successful get data Child Flag = %d and ID = %s and num = %d\n", *connfdFlag, IDBuffer, num);
                 shmdt(connfdFlag);
                 shmdt(IDBuffer);
+                shmdt(disconnect);
                 shmdt(addSockfd);
                 exit(0);
             }
@@ -210,7 +228,7 @@ int main(int argc, char **argv) {
 
 */
 
-void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addSockfd, char *IDBuffer) {
+void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addSockfd, char *IDBuffer, int *disconnect) {
     char sendline[MAXLINE], recvline[MAXLINE], diceValue[6] = {0}, diceToRoll[6] = {0};
     int maxfdp1 = -1, stepCount = -1, turn = -1, oneTurnDoneFlag = 1, scoreTable[19], totalScoreTable[4][19], first = 1, endGame = 0;
     memset(totalScoreTable, -1, sizeof(totalScoreTable));
@@ -256,12 +274,13 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                 if (endGame) {                                                                  // Game is over
                     if (Read(sockfd[i], recvline, MAXLINE) == 0 || !strcmp(recvline, "2\n")) {  // Player do not want to play next game
                         printf("Player %d wants to exit game\n", i + 1);
-                        Writen(sockfd[i], "m:See you next time!\n", MAXLINE);
+                        Writen(sockfd[i], "See you next time!\n", MAXLINE);
                         numOfPlayer--;
                         Close(sockfd[i]);
+                        *disconnect = sockfd[i];
                         for (int j = 0; j < 4; j++) {  // Broadcast to all users.
                             if (j == i || sockfd[j] == 0) continue;
-                            sprintf(sendline, "m:Player %s has left the room.\n\n", userID[i]);
+                            sprintf(sendline, "Player %s has left the room.\n\n", userID[i]);
                             Writen(sockfd[j], sendline, MAXLINE);
                         }
                         logout(userID[i]);  // logout
@@ -272,6 +291,8 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         *addSockfd = sockfd[i];
                         strcpy(IDBuffer, userID[i]);
                         *connfdFlag = 10;
+                        Writen(sockfd[i], "In the waiting room, you can type to chat with other players.\n\nPress [1] to start a game.\nPress [2] to show your game history.\nPress [3] to show players in waiting room.\nPress [4]"
+                        "to exit the game.\n\n", MAXLINE);
                         Close(sockfd[i]);
                         sockfd[i] = 0;  // Reset sockfd and id
                         memset(userID[i], 0, sizeof(userID[i]));
@@ -283,6 +304,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         Writen(sockfd[i], "m:See you next time!\n", MAXLINE);
                         numOfPlayer--;
                         Close(sockfd[i]);
+                        *disconnect = sockfd[i];
                         for (int j = 0; j < 4; j++) {  // Broadcast to all users.
                             if (j == i || sockfd[j] == 0) continue;
                             sprintf(sendline, "m:Player %s has left the room.\n\n", userID[i]);
@@ -514,7 +536,7 @@ void *waitingRoom(void *argv) {
                     Close(waitingRoomConnfd[i]);
                     for (int j = 0; j < 4; j++) {  // Broadcast to all users.
                         if (j == i || waitingRoomConnfd[j] == 0) continue;
-                        sprintf(sendline, "Player %s has left the room.\n\nThere are %d players in the room, waiting for somebody to start a game.\n\n", waitingRoomUserID[i], numOfMember);
+                        sprintf(sendline, "Player %s has left the room.\n\nThere are %d players in the waiting room, waiting for somebody to start a game.\n\n", waitingRoomUserID[i], numOfMember);
                         Writen(waitingRoomConnfd[j], sendline, MAXLINE);
                     }
                     logout(waitingRoomUserID[i]);  // logout
