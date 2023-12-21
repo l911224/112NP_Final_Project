@@ -1,4 +1,5 @@
 #include "unp.h"
+#include <termios.h>
 
 #define RED     "\x1b[;31;1m"
 #define GREEN   "\x1b[;32;1m"
@@ -12,7 +13,10 @@ int line_num = 1, slide_ptr = 0, curr_turn = -1;
 char sys_msg[15][512], dice_value[5], roll_dices[5];
 int score_data[4][19];
 
-void od_set_cursor(int x, int y) { printf("\x1B[%d;%dH", x, y); }
+void od_set_cursor(int x, int y) { 
+    printf("\x1B[%d;%dH", x, y); 
+    fflush(stdout);
+}
 
 void od_clr_scr() { printf("\x1B[2J"); }
 
@@ -24,9 +28,24 @@ void od_disp_str_purple(const char *str) { printf(PURPLE "%s", str); }
 void od_disp_str_cyan(const char *str)   { printf(CYAN "%s", str); }
 void od_disp_str_white(const char *str)  { printf(WHITE "%s", str); }
 
+int getch(void) {
+    int ch;
+    struct termios oldt, newt;
+
+    tcgetattr(STDIN_FILENO, &oldt);
+    memcpy(&newt, &oldt, sizeof(newt));
+    newt.c_lflag &= ~(ECHO | ICANON | ECHOE | ECHOK | ECHONL | ECHOPRT | ECHOKE | ICRNL);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    ch = getchar();
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+
+    return ch;
+}
+
 void putxy(int x, int y, const char *str, const char *color) {
     od_set_cursor(x, y);
     printf("%s%s\n", color, str);
+    fflush(stdout);
 }
 
 void draw_title(int x, int y) {
@@ -209,6 +228,7 @@ void put_sys_msg(char *str) {
         putxy(22 + i - slide_ptr, 79, sys_msg[i], YELLOW);
     
     line_num++;
+    od_set_cursor(47, 1);
 }
 
 void draw_cmd_board(int x, int y) {
@@ -244,12 +264,29 @@ void start_game() {
 }
 
 void fill_score_data(char *score) {
-    char *data = strtok(score, " ");
+    char *data = strtok(score, ",");
     int pos = 0;
 
     while (data != NULL) {
         score_data[curr_turn][pos++] = strtol(data, NULL, 10);
-        data = strtok(NULL, " ");
+        data = strtok(NULL, ",");
+    }
+
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 19; j++) {
+            
+        }
+    }
+}
+
+void print_score_data(char *score) {
+    char *data = strtok(score, ",");
+    int pos = 0;
+
+    while (data != NULL) {
+        if (pos == 9) pos = 10; // skip "LOWER　SECTION" row
+        putxy(7 + 2 * pos++, 36 + 11 * curr_turn, data, GREEN);
+        data = strtok(NULL, ",");
     }
 }
 
@@ -274,22 +311,25 @@ void xchg_data(FILE *fp, int sockfd) {
             if (Read(sockfd, recvline, MAXLINE) == 0) return;
 
             if (recvline[0] == 'm' && recvline[1] == ':') { // system msg
-                if (strcmp(recvline + 2, "Game start!\n\n") == 0) 
-                    start_game();
+                if (strcmp(recvline + 2, "Game start!\n\n") == 0) start_game();
                 
-                memmove(recvline, recvline + 2, strlen(recvline + 2));
-                sprintf(msg, "%s\n", recvline);
-                put_sys_msg(msg);
-                od_set_cursor(80, 1);
+                strcpy(msg, recvline + 2);
+                char *data = strtok(msg, "\n");
+                while (data != NULL) {
+                    put_sys_msg(data);
+                    data = strtok(NULL, "\n");
+                }
             }
-            else if (recvline[0] == 't' && recvline[1] == ':') { // turn & dice value & score table
+            else if (recvline[0] == 't' && recvline[1] == ':') { // turn & dice value & score table for 1 person
                 char scoreTable[MAXLINE];
                 sscanf(recvline + 2, "%d\nv:%s\ns:%s\n", &curr_turn, dice_value, scoreTable);
+                for (int i = 0; i < 5; i++) draw_dice_content(i + 1, dice_value[i] - '0', WHITE);
                 sprintf(msg, "Player %d rolled: %c %c %c %c %c\n", curr_turn + 1, dice_value[0], dice_value[1], dice_value[2], dice_value[3], dice_value[4]);
-                for (int i = 0; i < 5; i++) draw_dice_content(i + 1, atoi(dice_value[i + 1]), WHITE);
                 put_sys_msg(msg);
-                fill_score_data(scoreTable);
-                od_set_cursor(80, 1);
+                print_score_data(scoreTable);
+            }
+            else if (recvline[0] == 'a' && recvline[1] == ':') { // all table
+                
             }
             else {
                 printf("recv: %s", recvline);
