@@ -9,9 +9,8 @@
 #define CYAN    "\x1b[;36;1m"
 #define WHITE   "\x1b[;37;1m"
 
-int line_num = 1, slide_ptr = 0, curr_turn = -1, player_num;
+int line_num = 0, slide_ptr = 0, curr_turn = -1, player_num;
 char sys_msg[15][44], dice_value[5], roll_dices[5];
-int score_data[4][19];
 
 void od_set_cursor(int x, int y) { 
     printf("\x1B[%d;%dH", x, y); 
@@ -193,6 +192,8 @@ void draw_dice_content(int num, int val, char *color) {
         putxy(x + 6, y, "└───────────┘", color);
         break;        
     }
+
+    od_set_cursor(47, 1);
 }
 
 void draw_sys_msg_board(int x, int y) {
@@ -220,24 +221,16 @@ void draw_sys_msg_board(int x, int y) {
 void put_sys_msg(char *str) {
     int index = line_num % 15;
     line_num++;
-
     strncpy(sys_msg[index], str, sizeof(sys_msg[index]) - 1);
     sys_msg[index][sizeof(sys_msg[index]) - 1] = '\0';
-
     int start = line_num > 15 ? line_num % 15 : 0;
-
     for (int i = 0; i < 15; i++) {
         int idx = (start + i) % 15;
         putxy(22 + i, 79, "                                          ", YELLOW);
         putxy(22 + i, 79, sys_msg[idx], YELLOW);
     }
-
     od_set_cursor(47, 1);
 }
-
-
-
-
 
 void draw_cmd_board(int x, int y) {
     putxy(x    , y, "┌──────────────────────┐", WHITE);
@@ -263,28 +256,11 @@ void start_game() {
     draw_cmd_board(38, 77);
 
     // initialize
-    line_num = 1;
+    line_num = 0;
     slide_ptr = 0;
     curr_turn = -1;
     memset(sys_msg, 0, sizeof(sys_msg));
     memset(roll_dices, '1', sizeof(roll_dices));
-    memset(score_data, -1, sizeof(score_data));
-}
-
-void fill_score_data(char *score) {
-    char *data = strtok(score, ",");
-    int pos = 0;
-
-    while (data != NULL) {
-        score_data[curr_turn][pos++] = strtol(data, NULL, 10);
-        data = strtok(NULL, ",");
-    }
-
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 19; j++) {
-            
-        }
-    }
 }
 
 void print_score_data(int turn, char *score) {
@@ -304,6 +280,32 @@ void print_score_data(int turn, char *score) {
         data = strtok(NULL, ",");
     }
     od_set_cursor(47, 1);
+}
+
+char *wait_cmd() {
+    int key, dice_chosen[5] = {0};
+    char ret[MAXLINE];
+
+    while(1){
+        if (curr_turn != player_num) continue; 
+
+        while ((key = getch()) == 0)
+            ;
+            
+        switch (key) {
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+                draw_dice_content(key - '0', dice_value[key - '0' - 1] - '0', dice_chosen[key - '0' - 1] ? WHITE : RED);
+                dice_chosen[key - '0' - 1] = dice_chosen[key - '0' - 1] ? 0 : 1;
+                break;
+            case 'c':
+            case 'C':
+
+        }
+    }
 }
 
 void xchg_data(FILE *fp, int sockfd) {
@@ -350,7 +352,7 @@ void xchg_data(FILE *fp, int sockfd) {
                 sprintf(msg, "Player %d rolled: %c %c %c %c %c\n", curr_turn + 1, dice_value[0], dice_value[1], dice_value[2], dice_value[3], dice_value[4]);
                 put_sys_msg(msg);
                 print_score_data(curr_turn, scoreTable);
-                
+                wait_cmd();
             }
             else if (recvline[0] == 'a' && recvline[1] == ':') { // all table
                 char scoreTable[4][MAXLINE];
