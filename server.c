@@ -274,13 +274,13 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                 if (endGame) {                                                                  // Game is over
                     if (Read(sockfd[i], recvline, MAXLINE) == 0 || !strcmp(recvline, "2\n")) {  // Player do not want to play next game
                         printf("Player %d wants to exit game\n", i + 1);
-                        Writen(sockfd[i], "See you next time!\n", MAXLINE);
+                        Writen(sockfd[i], "m:See you next time!\n", MAXLINE);
                         numOfPlayer--;
                         Close(sockfd[i]);
                         *disconnect = sockfd[i];
                         for (int j = 0; j < 4; j++) {  // Broadcast to all users.
                             if (j == i || sockfd[j] == 0) continue;
-                            sprintf(sendline, "Player %s has left the room.\n\n", userID[i]);
+                            sprintf(sendline, "m:Player %s has left the room.\n\n", userID[i]);
                             Writen(sockfd[j], sendline, MAXLINE);
                         }
                         logout(userID[i]);  // logout
@@ -297,7 +297,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         sockfd[i] = 0;  // Reset sockfd and id
                         memset(userID[i], 0, sizeof(userID[i]));
                     } else {
-                        Writen(sockfd[i], "w:Illegal operation. Please try again.\n\n", MAXLINE);
+                        Writen(sockfd[i], "m:Illegal operation. Please try again.\n\n", MAXLINE);
                     }
                 } else {
                     if (Read(sockfd[i], recvline, MAXLINE) == 0 || recvline[0] == 'Q') {  // Deal with ctrl + c and 'Q'
@@ -316,11 +316,11 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                     } else if (recvline[0] == 'r' && recvline[1] == ':') {  // r:01101 means to roll NO.2 3 5 dices
                         // Check player legal or not
                         if (i != turn) {
-                            sprintf(sendline, "w:Illegal operation.It is player %d turn.\n\n", turn + 1);
+                            /* sprintf(sendline, "w:Illegal operation.It is player %d turn.\n\n", turn + 1);
                             for (int j = 0; j < 4; j++) {
                                 if (sockfd[j] == 0) continue;
                                 Writen(sockfd[j], sendline, MAXLINE);
-                            }
+                            } */
                             continue;
                         }
                         sscanf(recvline, "%*[^:]:%s\n", diceToRoll);
@@ -346,17 +346,17 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                     } else if (recvline[0] == 'd' && recvline[1] == ':') {  // d:10 fill the 10th table
                         // Check player legal or not
                         if (i != turn) {
-                            sprintf(sendline, "w:Illegal operation. It is player %d's turn.\n\n", turn + 1);
+                            /* sprintf(sendline, "w:Illegal operation. It is player %d's turn.\n\n", turn + 1);
                             for (int j = 0; j < 4; j++) {
                                 if (sockfd[j] == 0) continue;
                                 Writen(sockfd[j], sendline, MAXLINE);
-                            }
+                            } */
                             continue;
                         }
                         int toFill = 0;
                         sscanf(recvline, "%*[^:]:%d\n", &toFill);
                         if (totalScoreTable[turn][toFill] != -1 || toFill == 6 || toFill == 7 || toFill == 8 || toFill == 16 || toFill == 17 || toFill == 18) {  // Illegal operation
-                            Writen(sockfd[i], "w:Illegal operation.\n\n", MAXLINE);
+                            //Writen(sockfd[i], "w:Illegal operation.\n\n", MAXLINE);
                         } else {  // Fill the totalScoreTable
                             totalScoreTable[turn][toFill] = scoreTable[toFill];
                             oneTurnDoneFlag = 1;
@@ -398,7 +398,8 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                             for (int j = 0; j < 4; j++) {  // sendScore like : 1,2,3,4,5,6,7,8,-1,-1,0,0,-1,-1,0,0,12,13,-1
                                 if (sockfd[j] == 0) continue;
                                 char n[30];
-                                sprintf(n, "Player %d: ", j);
+                                strcat(sendScore, "total:\n");
+                                sprintf(n, "%d: ", j);
                                 strcat(sendScore, n);
                                 for (int k = 0; k < 19; k++) {
                                     char tmp[30];
@@ -447,9 +448,9 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                     }
                 }
                 if (count)
-                    strcat(sendWinner, "Winner are ");
+                    strcat(sendWinner, "m:Winner are ");
                 else
-                    strcat(sendWinner, "Winner is ");
+                    strcat(sendWinner, "m:Winner is ");
                 for (int i = 0; i < 4; i++) {
                     if (winner[i] == -1) break;
                     strcat(sendWinner, userID[winner[i]]);
