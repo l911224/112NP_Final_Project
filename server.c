@@ -516,7 +516,6 @@ void *waitingRoom(void *argv) {
         memset(sendline, 0, sizeof(sendline));
         memset(recvline, 0, sizeof(recvline));
         for (int i = 0; i < 4; i++) {
-            // printf("waitingRoomSockfd[%d] = %d\n",i,waitingRoomSockfd[i]);
             if (waitingRoomConnfd[i] != 0) {
                 FD_SET(waitingRoomConnfd[i], &rset);
                 maxfdp1 = max(maxfdp1, waitingRoomConnfd[i]);
@@ -873,9 +872,9 @@ void countScore(char diceValue[6], int *scoreTable) {
         if (count[i] == 0) countZero++;
         tmp += count[i] * i;
     }
-    flag = (countZero > 1) ? 0 : 1;
+    flag = (countZero > 2) ? 0 : 1;
     if (flag)
-        scoreTable[12] = tmp;
+        scoreTable[12] = 30;
     else
         scoreTable[12] = 0;
     // Large straight
@@ -886,9 +885,9 @@ void countScore(char diceValue[6], int *scoreTable) {
         if (count[i] == 0) countZero++;
         tmp += count[i] * i;
     }
-    flag = (countZero > 0) ? 0 : 1;
+    flag = (countZero > 1) ? 0 : 1;
     if (flag)
-        scoreTable[13] = tmp;
+        scoreTable[13] = 40;
     else
         scoreTable[13] = 0;
     // Yahtzee
