@@ -551,7 +551,8 @@ void *waitingRoom(void *argv) {
                 GAMESTART:
                     for (int j = 0; j < 4; j++) {
                         if (waitingRoomConnfd[j] == 0) continue;
-                        Writen(waitingRoomConnfd[j], "m:Game start!\n\n", MAXLINE);
+                        sprintf(sendline, "m:Game start!\nn:%d\n\n", j);  //n:player number
+                        Writen(waitingRoomConnfd[j], sendline, MAXLINE);
                     }
                     startGame = 1;
                     break;
