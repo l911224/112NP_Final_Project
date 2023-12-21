@@ -9,7 +9,7 @@
 #define CYAN    "\x1b[;36;1m"
 #define WHITE   "\x1b[;37;1m"
 
-int line_num = 1, slide_ptr = 0, curr_turn = -1;
+int line_num = 1, slide_ptr = 0, curr_turn = -1, player_num;
 char sys_msg[15][512], dice_value[5], roll_dices[5];
 int score_data[4][19];
 
@@ -42,7 +42,7 @@ int getch(void) {
     return ch;
 }
 
-void putxy(int x, int y, const char *str, const char *color) {
+void putxy(int x, int y, char *str, char *color) {
     od_set_cursor(x, y);
     printf("%s%s\n", color, str);
     fflush(stdout);
@@ -218,18 +218,21 @@ void draw_sys_msg_board(int x, int y) {
 }
 
 void put_sys_msg(char *str) {
-    slide_ptr = (line_num > 15) ? (line_num - 15) % 15 : 0;
-    strcpy(sys_msg[(line_num - 1) % 15], str);
-
-    for (int i = slide_ptr; i < 15; i++) 
-        putxy(22 + i - slide_ptr, 79, sys_msg[i], YELLOW);
-
-    for (int i = 0; i < slide_ptr; i++) 
-        putxy(22 + i - slide_ptr, 79, sys_msg[i], YELLOW);
-    
+    int index = line_num % 15;
     line_num++;
+
+    memset(sys_msg[index], ' ', sizeof(sys_msg[index]) - 1);
+    sys_msg[index][sizeof(sys_msg[index]) - 1] = '\0';
+    strncpy(sys_msg[index], str, sizeof(sys_msg[index]) - 1);
+
+    int start = line_num > 15 ? line_num % 15 : 0;
+    for (int i = 0; i < 15; i++) {
+        int idx = (start + i) % 15;
+        // putxy(22 + i, 79, sys_msg[idx], YELLOW);
+    }
     od_set_cursor(47, 1);
 }
+
 
 void draw_cmd_board(int x, int y) {
     putxy(x    , y, "┌──────────────────────┐", WHITE);
@@ -298,9 +301,6 @@ void print_score_data(int turn, char *score) {
     od_set_cursor(47, 1);
 }
 
-
-
-
 void xchg_data(FILE *fp, int sockfd) {
     int maxfdp1;
     char sendline[MAXLINE], recvline[MAXLINE], msg[MAXLINE];
@@ -322,13 +322,20 @@ void xchg_data(FILE *fp, int sockfd) {
             if (Read(sockfd, recvline, MAXLINE) == 0) return;
 
             if (recvline[0] == 'm' && recvline[1] == ':') { // system msg
-                if (strcmp(recvline + 2, "Game start!\n\n") == 0) start_game();
-                
-                strcpy(msg, recvline + 2);
-                char *data = strtok(msg, "\n");
-                while (data != NULL) {
-                    put_sys_msg(data);
-                    data = strtok(NULL, "\n");
+                if (strstr(recvline, "Game start!") != NULL) {
+                    start_game();
+                    sscanf(recvline + 2, "Game start!\nn:%d\n\n", &player_num);
+                    sprintf(msg, "Game start! You are PLAYER %d!\n", player_num + 1);
+                    put_sys_msg(msg);
+                }
+                else {
+                    strcpy(msg, recvline + 2);
+                    char *data = strtok(msg, "\n");
+                    while (data != NULL) {
+                        if (!(data[0] == 'n' && data[1] == ':'))
+                            put_sys_msg(data);
+                        data = strtok(NULL, "\n");
+                    }
                 }
             }
             else if (recvline[0] == 't' && recvline[1] == ':') { // turn & dice value & score table for 1 person
