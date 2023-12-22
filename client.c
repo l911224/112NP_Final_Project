@@ -295,10 +295,18 @@ void print_score_data(int turn, char *score, char *color) {
 
         if (pos == 9) pos = 10; // skip "LOWER SECTION" row
 
-        if (data[0] == '-') sprintf(formattedData, "   ");
-        else if (strcmp(color, GREEN) == 0) sprintf(formattedData, "+%s ", data);
-        else if (strcmp(color, WHITE) == 0) sprintf(formattedData, "%s  ", data);
-
+        if (strcmp(color, GREEN) == 0) {
+            if (strstr(data, "-")) {
+                pos++;
+                data = strtok(NULL, ",");
+                continue;
+            }
+            else sprintf(formattedData, "+%s ", data);
+        }
+        else if (strcmp(color, WHITE) == 0) {
+            if (strstr(data, "-")) sprintf(formattedData, "   ");
+            else sprintf(formattedData, "%s  ", data);
+        }
         putxy(7 + 2 * pos++, 36 + 11 * turn, formattedData, color);
         data = strtok(NULL, ",");
     }
@@ -373,19 +381,17 @@ void xchg_data(FILE *fp, int sockfd) {
                 if (strstr(recvline, "Game start!") != NULL) {
                     start_game();
                     sscanf(recvline + 2, "Game start!\nn:%d\n\n", &player_num);
-                    sprintf(msg, "Game start! You are PLAYER %d!\n", player_num + 1);
-                    put_sys_msg(msg);
                     login_flag = 0;
                 }
-                else {
-                    strcpy(msg, recvline + 2);
-                    char *data = strtok(msg, "\n");
-                    while (data != NULL) {
-                        if (!(data[0] == 'n' && data[1] == ':'))
-                            put_sys_msg(data);
-                        data = strtok(NULL, "\n");
-                    }
+
+                strcpy(msg, recvline + 2);
+                char *data = strtok(msg, "\n");
+                while (data != NULL) {
+                    if (!(data[0] == 'n' && data[1] == ':'))
+                        put_sys_msg(data);
+                    data = strtok(NULL, "\n");
                 }
+                
                 if (strstr(recvline, "left the room") != NULL)
                     cmd_flag = 0;
                 if (strstr(recvline, "See you") != NULL)
@@ -402,7 +408,7 @@ void xchg_data(FILE *fp, int sockfd) {
                 cmd_flag = 1;
                 move_selector(-1);
             }
-            else if (recvline[0] == 'a' && recvline[1] == ':') {
+            else if (recvline[0] == 'a' && recvline[1] == ':') { // all table
                 int pos = 0, lineStart = 2;
 
                 for (int i = lineStart; recvline[i] != '\0'; i++) {
