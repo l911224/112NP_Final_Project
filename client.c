@@ -29,15 +29,35 @@ void od_disp_str_cyan(const char *str)   { printf(CYAN "%s", str); }
 void od_disp_str_white(const char *str)  { printf(WHITE "%s", str); }
 
 int getch() {
-    int ch;
     struct termios oldt, newt;
+    int ch;
+    int oldf;
 
     tcgetattr(STDIN_FILENO, &oldt);
-    memcpy(&newt, &oldt, sizeof(newt));
-    newt.c_lflag &= ~(ECHO | ICANON | ECHOE | ECHOK | ECHONL | ECHOPRT | ECHOKE | ICRNL);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-    ch = getchar();
+
+    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+
+    fd_set set;
+    struct timeval timeout;
+
+    FD_ZERO(&set);
+    FD_SET(STDIN_FILENO, &set);
+
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
+
+    if (select(STDIN_FILENO + 1, &set, NULL, NULL, &timeout) > 0) {
+        ch = getchar();
+    } else {
+        ch = EOF;
+    }
+
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    fcntl(STDIN_FILENO, F_SETFL, oldf);
 
     return ch;
 }
@@ -276,7 +296,8 @@ void print_score_data(int turn, char *score, char *color) {
         if (pos == 9) pos = 10; // skip "LOWER SECTION" row
 
         if (data[0] == '-') sprintf(formattedData, "   ");
-        else sprintf(formattedData, "+%s ", data);
+        else if (strcmp(color, GREEN) == 0) sprintf(formattedData, "+%s ", data);
+        else if (strcmp(color, WHITE) == 0) sprintf(formattedData, "%s  ", data);
 
         putxy(7 + 2 * pos++, 36 + 11 * turn, formattedData, color);
         data = strtok(NULL, ",");
