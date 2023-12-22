@@ -402,15 +402,27 @@ void xchg_data(FILE *fp, int sockfd) {
                 cmd_flag = 1;
                 move_selector(-1);
             }
-            else if (recvline[0] == 'a' && recvline[1] == ':') { // all table
-                int pos = 0;
-                strcpy(msg, recvline + 2);
-                char *data = strtok(msg, " ");
-                while (data != NULL) {
-                    strcpy(score_table[pos], data + 2);
-                    print_score_data(pos, score_table[pos], WHITE);
-                    data = strtok(NULL, " ");
-                    pos++;
+            else if (recvline[0] == 'a' && recvline[1] == ':') {
+                int pos = 0, lineStart = 2;
+
+                for (int i = lineStart; recvline[i] != '\0'; i++) {
+                    if (recvline[i] == ';' || recvline[i+1] == '\0') {
+                        char lineData[MAXLINE];
+                        int lineLength = (recvline[i+1] == '\0') ? (i+1 - lineStart) : (i - lineStart);
+                        strncpy(lineData, recvline + lineStart, lineLength);
+                        lineData[lineLength] = '\0';
+
+                        char *scoreData = strchr(lineData, ':');
+                        if (scoreData != NULL) {
+                            scoreData++;
+                            strcpy(score_table[pos], scoreData);
+                            print_score_data(pos, score_table[pos], WHITE);
+                        }
+
+                        lineStart = i + 1; 
+                        pos++;
+                        if (recvline[i+1] == '\0') break;
+                    }
                 }
             }
             else {
