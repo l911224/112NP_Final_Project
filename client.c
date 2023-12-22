@@ -367,6 +367,8 @@ void xchg_data(FILE *fp, int sockfd) {
                 }
                 if (strstr(recvline, "left the room") != NULL)
                     cmd_flag = 0;
+                if (strstr(recvline, "See you") != NULL)
+                    break;
             }
             else if (recvline[0] == 't' && recvline[1] == ':') { // turn & dice value & score table for 1 person
                 char tmp_table[MAXLINE];
@@ -404,61 +406,115 @@ void xchg_data(FILE *fp, int sockfd) {
         if (cmd_flag && curr_turn == player_num) {
             key = getch();
             switch (key) {
-                case '1':
-                case '2':
-                case '3':
-                case '4':
-                case '5':
-                    if (change_dice_times < 2) {
-                        draw_dice_content(key - '0', dice_value[key - '0' - 1] - '0', dice_chosen[key - '0' - 1] ? WHITE : RED);
-                        dice_chosen[key - '0' - 1] = dice_chosen[key - '0' - 1] ? 0 : 1;
-                    }
-                    else if (change_dice_times == 2) {
-                        sprintf(msg, "You have changed twice!\n");
-                        put_sys_msg(msg);
-                    }
-                    break;
-                case 'c':
-                case 'C':
-                    if ((dice_chosen[0] || dice_chosen[1] || dice_chosen[2] || dice_chosen[3] || dice_chosen[4]) && change_dice_times < 2) {
-                        sprintf(sendline, "r:%d%d%d%d%d\n", dice_chosen[0], dice_chosen[1], dice_chosen[2], dice_chosen[3], dice_chosen[4]);
-                        Writen(sockfd, sendline, strlen(sendline));
-                        cmd_flag = 0;
-                        change_dice_times++;
-                        for (int i = 0; i < 5; i++) dice_chosen[i] = 0;
-                    }
-                    else if (change_dice_times == 2) {
-                        sprintf(msg, "You have changed twice!\n");
-                        put_sys_msg(msg);
-                    }
-                    else {
-                        sprintf(msg, "You haven't chosen any dice!\n");
-                        put_sys_msg(msg);
-                    }      
-                    break;
-                case 27: // ESC key
-                    int ch2 = getch();
-                    if (ch2 == '[') {
-                        int ch3 = getch();
-                        switch (ch3) {
-                        case 'A': // Up arrow
-                            move_selector(-1);
-                            break;
-                        case 'B': // Down arrow
-                            move_selector(1);
-                            break;
-                        }
-                    }
-                    break;
-                case '\n': // Enter
-                    if (selector_pos > 9) selector_pos--;
-                    sprintf(sendline, "d:%d\n", selector_pos);
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+                if (change_dice_times < 2) {
+                    draw_dice_content(key - '0', dice_value[key - '0' - 1] - '0', dice_chosen[key - '0' - 1] ? WHITE : RED);
+                    dice_chosen[key - '0' - 1] = dice_chosen[key - '0' - 1] ? 0 : 1;
+                }
+                else if (change_dice_times == 2) {
+                    sprintf(msg, "You have changed twice!\n");
+                    put_sys_msg(msg);
+                }
+                break;
+            case 'c':
+            case 'C':
+                if ((dice_chosen[0] || dice_chosen[1] || dice_chosen[2] || dice_chosen[3] || dice_chosen[4]) && change_dice_times < 2) {
+                    sprintf(sendline, "r:%d%d%d%d%d\n", dice_chosen[0], dice_chosen[1], dice_chosen[2], dice_chosen[3], dice_chosen[4]);
                     Writen(sockfd, sendline, strlen(sendline));
                     cmd_flag = 0;
-                    break;
+                    change_dice_times++;
+                    for (int i = 0; i < 5; i++) dice_chosen[i] = 0;
+                }
+                else if (change_dice_times == 2) {
+                    sprintf(msg, "You have changed twice!\n");
+                    put_sys_msg(msg);
+                }
+                else {
+                    sprintf(msg, "You haven't chosen any dice!\n");
+                    put_sys_msg(msg);
+                }      
+                break;
+            case 27: // ESC key
+                int ch = getch();
+                if (ch == '[') {
+                    int ch2 = getch();
+                    switch (ch2) {
+                    case 'A': // Up arrow
+                        move_selector(-1);
+                        break;
+                    case 'B': // Down arrow
+                        move_selector(1);
+                        break;
+                    }
+                }
+                break;
+            case '\n': // Enter
+                if (selector_pos > 9) selector_pos--;
+                sprintf(sendline, "d:%d\n", selector_pos);
+                Writen(sockfd, sendline, strlen(sendline));
+                cmd_flag = 0;
+                break;
+            case 'q':
+            case 'Q':
+                sprintf(msg, "Quit the game? [Y/N]\n");
+                put_sys_msg(msg);
+
+                int chose_flag = 0;
+                while (!chose_flag) {
+                    int ch = getch();
+                    switch (ch) {
+                        case 'y':
+                        case 'Y':
+                            Writen(sockfd, "Q\n", 3);
+                            cmd_flag = 0;
+                            chose_flag = 1;
+                            break;
+                        case 'n':
+                        case 'N':
+                            sprintf(msg, "Game continue\n");
+                            put_sys_msg(msg);
+                            chose_flag = 1;
+                            break;
+                    }
+                }
+                break;
             }
         }
-    }
+
+        else if (cmd_flag && curr_turn != player_num) {
+            key = getch();
+            switch (key) {
+            case 'q':
+            case 'Q':
+                sprintf(msg, "Quit the game? [Y/N]\n");
+                put_sys_msg(msg);
+
+                int chose_flag = 0;
+                while (!chose_flag) {
+                    int ch = getch();
+                    switch (ch) {
+                        case 'y':
+                        case 'Y':
+                            Writen(sockfd, "Q\n", 3);
+                            cmd_flag = 0;
+                            chose_flag = 1;
+                            break;
+                        case 'n':
+                        case 'N':
+                            sprintf(msg, "Game continue\n");
+                            put_sys_msg(msg);
+                            chose_flag = 1;
+                            break;
+                    }
+                }
+                break;
+            }
+        }
+    } 
 }
 
 int main(int argc, char **argv) {
