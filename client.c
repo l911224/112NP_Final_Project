@@ -401,7 +401,7 @@ void xchg_data(FILE *fp, int sockfd) {
             Writen(sockfd, sendline, strlen(sendline));
         }
 
-        if (cmd_flag) {
+        if (cmd_flag && curr_turn == player_num) {
             key = getch();
             switch (key) {
                 case '1':
@@ -409,7 +409,7 @@ void xchg_data(FILE *fp, int sockfd) {
                 case '3':
                 case '4':
                 case '5':
-                    if (curr_turn == player_num && change_dice_times < 2) {
+                    if (change_dice_times < 2) {
                         draw_dice_content(key - '0', dice_value[key - '0' - 1] - '0', dice_chosen[key - '0' - 1] ? WHITE : RED);
                         dice_chosen[key - '0' - 1] = dice_chosen[key - '0' - 1] ? 0 : 1;
                     }
@@ -420,46 +420,40 @@ void xchg_data(FILE *fp, int sockfd) {
                     break;
                 case 'c':
                 case 'C':
-                    if (curr_turn == player_num) {
-                        if ((dice_chosen[0] || dice_chosen[1] || dice_chosen[2] || dice_chosen[3] || dice_chosen[4]) && change_dice_times < 2) {
-                            sprintf(sendline, "r:%d%d%d%d%d\n", dice_chosen[0], dice_chosen[1], dice_chosen[2], dice_chosen[3], dice_chosen[4]);
-                            Writen(sockfd, sendline, strlen(sendline));
-                            cmd_flag = 0;
-                            change_dice_times++;
-                            for (int i = 0; i < 5; i++) dice_chosen[i] = 0;
-                        }
-                        else if (change_dice_times == 2) {
-                            sprintf(msg, "You have changed twice!\n");
-                            put_sys_msg(msg);
-                        }
-                        else {
-                            sprintf(msg, "You haven't chosen any dice!\n");
-                            put_sys_msg(msg);
-                        }                            
+                    if ((dice_chosen[0] || dice_chosen[1] || dice_chosen[2] || dice_chosen[3] || dice_chosen[4]) && change_dice_times < 2) {
+                        sprintf(sendline, "r:%d%d%d%d%d\n", dice_chosen[0], dice_chosen[1], dice_chosen[2], dice_chosen[3], dice_chosen[4]);
+                        Writen(sockfd, sendline, strlen(sendline));
+                        cmd_flag = 0;
+                        change_dice_times++;
+                        for (int i = 0; i < 5; i++) dice_chosen[i] = 0;
                     }
+                    else if (change_dice_times == 2) {
+                        sprintf(msg, "You have changed twice!\n");
+                        put_sys_msg(msg);
+                    }
+                    else {
+                        sprintf(msg, "You haven't chosen any dice!\n");
+                        put_sys_msg(msg);
+                    }      
                     break;
                 case 27: // ESC key
-                    if (curr_turn == player_num) {
-                        int ch2 = getch();
-                        if (ch2 == '[') {
-                            int ch3 = getch();
-                            switch (ch3) {
-                            case 'A': // Up arrow
-                                move_selector(-1);
-                                break;
-                            case 'B': // Down arrow
-                                move_selector(1);
-                                break;
-                            }
+                    int ch2 = getch();
+                    if (ch2 == '[') {
+                        int ch3 = getch();
+                        switch (ch3) {
+                        case 'A': // Up arrow
+                            move_selector(-1);
+                            break;
+                        case 'B': // Down arrow
+                            move_selector(1);
+                            break;
                         }
                     }
                     break;
                 case '\n': // Enter
-                    if (curr_turn == player_num) {
-                        if (selector_pos > 9) selector_pos--;
-                        sprintf(sendline, "d:%d\n", selector_pos);
-                        Writen(sockfd, sendline, strlen(sendline));
-                    }
+                    if (selector_pos > 9) selector_pos--;
+                    sprintf(sendline, "d:%d\n", selector_pos);
+                    Writen(sockfd, sendline, strlen(sendline));
                     cmd_flag = 0;
                     break;
             }
