@@ -257,7 +257,7 @@ void draw_cmd_board(int x, int y) {
     putxy(x    , y, "┌─────────────────────────────┐", WHITE);
     putxy(x + 1, y, "│ [ 1-5 ] Choose dices        │", WHITE);
     putxy(x + 2, y, "│ [  C  ] Change chosen dices │", WHITE);
-    putxy(x + 3, y, "│ [ ▲/▼ ] Move                │", WHITE);
+    putxy(x + 3, y, "│ [ U/D ] Move up / Move down │", WHITE);
     putxy(x + 4, y, "│ [Enter] Fill in             │", WHITE);
     putxy(x + 5, y, "│                             │", WHITE);
     putxy(x + 6, y, "│ [  Q  ] Quit Game           │", WHITE);
@@ -405,11 +405,11 @@ void xchg_data(FILE *fp, int sockfd) {
             else if (recvline[0] == 'a' && recvline[1] == ':') { // all table
                 int pos = 0;
                 strcpy(msg, recvline + 2);
-                char *data = strtok(msg, "\n");
+                char *data = strtok(msg, " ");
                 while (data != NULL) {
-                    strcpy(score_table[pos], data + 3);
+                    strcpy(score_table[pos], data + 2);
                     print_score_data(pos, score_table[pos], WHITE);
-                    data = strtok(NULL, "\n");
+                    data = strtok(NULL, " ");
                     pos++;
                 }
             }
@@ -459,19 +459,13 @@ void xchg_data(FILE *fp, int sockfd) {
                     put_sys_msg(msg);
                 }      
                 break;
-            case 27: // ESC key
-                int ch = getch();
-                if (ch == '[') {
-                    int ch2 = getch();
-                    switch (ch2) {
-                    case 'A': // Up arrow
-                        move_selector(-1);
-                        break;
-                    case 'B': // Down arrow
-                        move_selector(1);
-                        break;
-                    }
-                }
+            case 'u':
+            case 'U':                
+                move_selector(-1);
+                break;
+            case 'd':
+            case 'D':
+                move_selector(1);
                 break;
             case '\n': // Enter
                 if (selector_pos > 9) selector_pos--;

@@ -399,14 +399,14 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                             for (int j = 0; j < 4; j++) {  // sendScore like : 1,2,3,4,5,6,7,8,-1,-1,0,0,-1,-1,0,0,12,13,-1
                                 if (sockfd[j] == 0) continue;
                                 char n[30];
-                                sprintf(n, "%d: ", j);
+                                sprintf(n, "%d:", j);
                                 strcat(sendScore, n);
                                 for (int k = 0; k < 19; k++) {
                                     char tmp[30];
                                     sprintf(tmp, "%d,", totalScoreTable[j][k]);
                                     strcat(sendScore, tmp);
                                 }
-                                sendScore[strlen(sendScore) - 1] = '\n';
+                                sendScore[strlen(sendScore) - 1] = ' ';
                             }
                             for (int j = 0; j < 4; j++) {
                                 if (sockfd[j] == 0) continue;
