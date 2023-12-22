@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
     int listenfd, connfd[20] = {0}, maxfdp1 = -1;
     struct sockaddr_in cliaddr[20], servaddr;
     char userID[20][MAXLINE];
-    socklen_t clilen[20];
+    socklen_t clilen[20], servlen = sizeof(servaddr);
     // Shared memory set
     int shmFlag = 0, shmUserID = 0, shmAdd = 0, shmDis = 0;
     if ((shmFlag = shmget(IPC_PRIVATE, sizeof(int) * 1, IPC_CREAT | 0666)) < 0) {
@@ -85,9 +85,17 @@ int main(int argc, char **argv) {
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    //servaddr.sin_addr.s_addr = inet_addr("140.113.69.207");
     servaddr.sin_port = htons(SERV_PORT + 3);
-    Bind(listenfd, (SA *)&servaddr, sizeof(servaddr));
+    Bind(listenfd, (struct sockaddr_in*)&servaddr, sizeof(servaddr));
     Listen(listenfd, LISTENQ);
+    char ip[MAXLINE];
+    getsockname(listenfd, (struct sockaddr_in*) &servaddr, &servlen);
+
+    inet_ntop(AF_INET, &(servaddr.sin_addr), ip, MAXLINE);
+
+    // Print the local address and port
+    printf("Server is bound to: %s:%d\n", ip, ntohs(servaddr.sin_port));
 
     // Create FD_set
     fd_set rset;
@@ -399,14 +407,14 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                             for (int j = 0; j < 4; j++) {  // sendScore like a:1: 1,2,3,4,5,6,7,8,-1,-1,0,0,-1,-1,0,0,12,13,-1\n
                                 if (sockfd[j] == 0) continue;
                                 char n[30];
-                                sprintf(n, "%d: ", j);
+                                sprintf(n, "%d:", j);
                                 strcat(sendScore, n);
                                 for (int k = 0; k < 19; k++) {
                                     char tmp[30];
                                     sprintf(tmp, "%d,", totalScoreTable[j][k]);
                                     strcat(sendScore, tmp);
                                 }
-                                sendScore[strlen(sendScore) - 1] = '\n';
+                                sendScore[strlen(sendScore) - 1] = ' ';
                             }
                             for (int j = 0; j < 4; j++) {
                                 if (sockfd[j] == 0) continue;
