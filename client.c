@@ -9,9 +9,9 @@
 #define CYAN    "\x1b[;36;1m"
 #define WHITE   "\x1b[;37;1m"
 
-int line_num = 0, slide_ptr = 0, curr_turn = -1, player_num;
-char sys_msg[15][44], dice_value[5], roll_dices[5];
-struct timeval timeout = {0, 100};
+int line_num = 0, slide_ptr = 0, curr_turn = -1, player_num, selector_pos = 0;
+char sys_msg[15][44], dice_value[5], roll_dices[5], score_table[4][MAXLINE], choosing_table[MAXLINE];
+struct timeval timeout = {0, 1000};
 
 void od_set_cursor(int x, int y) { 
     printf("\x1B[%d;%dH", x, y); 
@@ -234,14 +234,14 @@ void put_sys_msg(char *str) {
 }
 
 void draw_cmd_board(int x, int y) {
-    putxy(x    , y, "┌──────────────────────┐", WHITE);
-    putxy(x + 1, y, "│ [ 1-5 ] Choose dices │", WHITE);
-    putxy(x + 2, y, "│ [  C  ] Change dices │", WHITE);
-    putxy(x + 3, y, "│ [ ▲/▼ ] Move         │", WHITE);
-    putxy(x + 4, y, "│ [Enter] Fill in      │", WHITE);
-    putxy(x + 5, y, "│                      │", WHITE);
-    putxy(x + 6, y, "│ [  Q  ] Quit Game    │", WHITE);
-    putxy(x + 7, y, "└──────────────────────┘", WHITE);
+    putxy(x    , y, "┌─────────────────────────────┐", WHITE);
+    putxy(x + 1, y, "│ [ 1-5 ] Choose dices        │", WHITE);
+    putxy(x + 2, y, "│ [  C  ] Change chosen dices │", WHITE);
+    putxy(x + 3, y, "│ [ ▲/▼ ] Move                │", WHITE);
+    putxy(x + 4, y, "│ [Enter] Fill in             │", WHITE);
+    putxy(x + 5, y, "│                             │", WHITE);
+    putxy(x + 6, y, "│ [  Q  ] Quit Game           │", WHITE);
+    putxy(x + 7, y, "└─────────────────────────────┘", WHITE);
 }
 
 void start_game() {
@@ -262,9 +262,11 @@ void start_game() {
     curr_turn = -1;
     memset(sys_msg, 0, sizeof(sys_msg));
     memset(roll_dices, '1', sizeof(roll_dices));
+    memset(score_table, 0, sizeof(score_table));
+    memset(choosing_table, 0, sizeof(choosing_table));
 }
 
-void print_score_data(int turn, char *score) {
+void print_score_data(int turn, char *score, char *color) {
     char *data = strtok(score, ",");
     int pos = 0;
 
@@ -273,20 +275,62 @@ void print_score_data(int turn, char *score) {
 
         if (pos == 9) pos = 10; // skip "LOWER SECTION" row
 
-        if (strlen(data) == 1) sprintf(formattedData, " %s", data);
-        else if (data[0] == '-') sprintf(formattedData, "   ");
-        else strcpy(formattedData, data);
+        if (data[0] == '-') sprintf(formattedData, "   ");
+        else sprintf(formattedData, "+%s ", data);
 
-        putxy(7 + 2 * pos++, 36 + 11 * turn, formattedData, GREEN);
+        putxy(7 + 2 * pos++, 36 + 11 * turn, formattedData, color);
         data = strtok(NULL, ",");
     }
     od_set_cursor(47, 1);
 }
 
+void move_selector(int dir) {
+    char table_data[20][4];
+    int pos = 0, init_pos = -1, last_pos = -1;
+    char token[4];
+    strcpy(table_data[9], "-1");
+
+    const char* p = choosing_table;
+    while (sscanf(p, "%3[^,],", token) == 1) {
+        if (pos == 9) pos++;
+        strncpy(table_data[pos], token, 4);
+        if (strcmp(table_data[pos], "-1") != 0) {
+            if (init_pos == -1) init_pos = pos;
+            last_pos = pos;
+        }
+        pos++;
+        p = strchr(p, ',');
+        if (!p) break;
+        p++;
+    }
+
+    if (selector_pos == -1) 
+        selector_pos = init_pos; 
+    else {
+        while (1) {
+            selector_pos += dir;
+            if (selector_pos < init_pos) {
+                selector_pos = init_pos;
+                break;
+            } else if (selector_pos > last_pos) {
+                selector_pos = last_pos;
+                break;
+            } else if (strcmp(table_data[selector_pos], "-1") != 0) {
+                break; 
+            }
+        }
+    }
+
+    od_set_cursor(7 + 2 * selector_pos, 36 + 11 * curr_turn);
+}
+
+
+
 void xchg_data(FILE *fp, int sockfd) {
     int maxfdp1;
     char sendline[MAXLINE], recvline[MAXLINE], msg[MAXLINE];
-    int key, dice_chosen[5] = {0}, wait_flag = 0;
+    int key, dice_chosen[5] = {0}, change_dice_times = 0;
+    int login_flag = 1, cmd_flag = 0;
 
     fd_set rset;
     FD_ZERO(&rset);
@@ -310,6 +354,7 @@ void xchg_data(FILE *fp, int sockfd) {
                     sscanf(recvline + 2, "Game start!\nn:%d\n\n", &player_num);
                     sprintf(msg, "Game start! You are PLAYER %d!\n", player_num + 1);
                     put_sys_msg(msg);
+                    login_flag = 0;
                 }
                 else {
                     strcpy(msg, recvline + 2);
@@ -320,25 +365,27 @@ void xchg_data(FILE *fp, int sockfd) {
                         data = strtok(NULL, "\n");
                     }
                 }
+                if (strstr(recvline, "left the room") != NULL)
+                    cmd_flag = 0;
             }
             else if (recvline[0] == 't' && recvline[1] == ':') { // turn & dice value & score table for 1 person
-                char scoreTable[MAXLINE];
-                sscanf(recvline + 2, "%d\nv:%s\ns:%s\n", &curr_turn, dice_value, scoreTable);
+                char tmp_table[MAXLINE];
+                sscanf(recvline + 2, "%d\nv:%s\ns:%s\n", &curr_turn, dice_value, choosing_table);
+                strcpy(tmp_table, choosing_table);
                 for (int i = 0; i < 5; i++) draw_dice_content(i + 1, dice_value[i] - '0', WHITE);
                 sprintf(msg, "Player %d rolled: %c %c %c %c %c\n", curr_turn + 1, dice_value[0], dice_value[1], dice_value[2], dice_value[3], dice_value[4]);
                 put_sys_msg(msg);
-                print_score_data(curr_turn, scoreTable);
-                wait_flag = 1;
+                print_score_data(curr_turn, tmp_table, GREEN);
+                cmd_flag = 1;
+                move_selector(-1);
             }
             else if (recvline[0] == 'a' && recvline[1] == ':') { // all table
-                char scoreTable[4][MAXLINE];
                 int pos = 0;
-
                 strcpy(msg, recvline + 2);
                 char *data = strtok(msg, "\n");
                 while (data != NULL) {
-                    strcpy(scoreTable[pos], data + 3);
-                    print_score_data(pos, scoreTable[pos]);
+                    strcpy(score_table[pos], data + 3);
+                    print_score_data(pos, score_table[pos], WHITE);
                     data = strtok(NULL, "\n");
                     pos++;
                 }
@@ -349,27 +396,72 @@ void xchg_data(FILE *fp, int sockfd) {
             }
         }
 
-        if (FD_ISSET(fileno(fp), &rset)) {
+        if (FD_ISSET(fileno(fp), &rset) && login_flag) {
             if (Fgets(sendline, MAXLINE, fp) == NULL) return;
             Writen(sockfd, sendline, strlen(sendline));
         }
 
-        if (wait_flag) {
-            while ((key = getch()) == 0)
-                ;
-                
+        if (cmd_flag) {
+            key = getch();
             switch (key) {
                 case '1':
                 case '2':
                 case '3':
                 case '4':
                 case '5':
-                    draw_dice_content(key - '0', dice_value[key - '0' - 1] - '0', dice_chosen[key - '0' - 1] ? WHITE : RED);
-                    dice_chosen[key - '0' - 1] = dice_chosen[key - '0' - 1] ? 0 : 1;
+                    if (curr_turn == player_num && change_dice_times < 2) {
+                        draw_dice_content(key - '0', dice_value[key - '0' - 1] - '0', dice_chosen[key - '0' - 1] ? WHITE : RED);
+                        dice_chosen[key - '0' - 1] = dice_chosen[key - '0' - 1] ? 0 : 1;
+                    }
+                    else if (change_dice_times == 2) {
+                        sprintf(msg, "You have changed twice!\n");
+                        put_sys_msg(msg);
+                    }
                     break;
                 case 'c':
                 case 'C':
-                    wait_flag = 0;
+                    if (curr_turn == player_num) {
+                        if ((dice_chosen[0] || dice_chosen[1] || dice_chosen[2] || dice_chosen[3] || dice_chosen[4]) && change_dice_times < 2) {
+                            sprintf(sendline, "r:%d%d%d%d%d\n", dice_chosen[0], dice_chosen[1], dice_chosen[2], dice_chosen[3], dice_chosen[4]);
+                            Writen(sockfd, sendline, strlen(sendline));
+                            cmd_flag = 0;
+                            change_dice_times++;
+                            for (int i = 0; i < 5; i++) dice_chosen[i] = 0;
+                        }
+                        else if (change_dice_times == 2) {
+                            sprintf(msg, "You have changed twice!\n");
+                            put_sys_msg(msg);
+                        }
+                        else {
+                            sprintf(msg, "You haven't chosen any dice!\n");
+                            put_sys_msg(msg);
+                        }                            
+                    }
+                    break;
+                case 27: // ESC key
+                    if (curr_turn == player_num) {
+                        int ch2 = getch();
+                        if (ch2 == '[') {
+                            int ch3 = getch();
+                            switch (ch3) {
+                            case 'A': // Up arrow
+                                move_selector(-1);
+                                break;
+                            case 'B': // Down arrow
+                                move_selector(1);
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                case '\n': // Enter
+                    if (curr_turn == player_num) {
+                        if (selector_pos > 9) selector_pos--;
+                        sprintf(sendline, "d:%d\n", selector_pos);
+                        Writen(sockfd, sendline, strlen(sendline));
+                    }
+                    cmd_flag = 0;
+                    break;
             }
         }
     }
