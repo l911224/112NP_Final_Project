@@ -261,6 +261,14 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
             numOfPlayer++;
             maxfdp1 = max(maxfdp1, sockfd[i]);
         }
+        if(numOfPlayer == 1){
+            for(int i = 0; i < 4; i++){
+                if(sockfd[i] == 0) continue;
+                Writen(sockfd[i], "m:You are the last player. So you are the winner.\n[1] Play one more game. [2] Exit game.\n\n", MAXLINE);
+                endGame = 1;
+            }
+            
+        }
         if (numOfPlayer == 0) break;
         maxfdp1 += 1;
         int sel = select(maxfdp1, &rset, 0, 0, &timeout);
