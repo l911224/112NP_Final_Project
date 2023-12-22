@@ -396,7 +396,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                             // Send current score table to all players
                             char sendScore[MAXLINE] = {0};
                             strcat(sendScore, "a:"); // all table
-                            for (int j = 0; j < 4; j++) {  // sendScore like : 1,2,3,4,5,6,7,8,-1,-1,0,0,-1,-1,0,0,12,13,-1
+                            for (int j = 0; j < 4; j++) {  // sendScore like a:1: 1,2,3,4,5,6,7,8,-1,-1,0,0,-1,-1,0,0,12,13,-1\n
                                 if (sockfd[j] == 0) continue;
                                 char n[30];
                                 sprintf(n, "%d: ", j);
