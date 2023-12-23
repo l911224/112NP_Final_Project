@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
     int listenfd, connfd[20] = {0}, maxfdp1 = -1;
     struct sockaddr_in cliaddr[20], servaddr;
     char userID[20][MAXLINE];
-    socklen_t clilen[20], servlen = sizeof(servaddr);
+    socklen_t clilen[20];
     // Shared memory set
     int shmFlag = 0, shmUserID = 0, shmAdd = 0, shmDis = 0;
     if ((shmFlag = shmget(IPC_PRIVATE, sizeof(int) * 1, IPC_CREAT | 0666)) < 0) {
@@ -85,17 +85,11 @@ int main(int argc, char **argv) {
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    //servaddr.sin_addr.s_addr = inet_addr("140.113.69.207");
+    //servaddr.sin_addr.s_addr = inet_addr("172.1.1.12");
     servaddr.sin_port = htons(SERV_PORT + 3);
     Bind(listenfd, (struct sockaddr_in*)&servaddr, sizeof(servaddr));
     Listen(listenfd, LISTENQ);
-    char ip[MAXLINE];
-    getsockname(listenfd, (struct sockaddr_in*) &servaddr, &servlen);
 
-    inet_ntop(AF_INET, &(servaddr.sin_addr), ip, MAXLINE);
-
-    // Print the local address and port
-    printf("Server is bound to: %s:%d\n", ip, ntohs(servaddr.sin_port));
 
     // Create FD_set
     fd_set rset;
