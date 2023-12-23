@@ -308,7 +308,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         strcpy(IDBuffer, userID[i]);
                         *connfdFlag = 10;
                         Writen(sockfd[i], "In the waiting room, you can type to chat with other players.\n\nPress [1] to start a game.\nPress [2] to show your game history.\nPress [3] to show players in waiting room.\nPress [4]"
-                        "to exit the game.\n\n", MAXLINE);
+                        " to exit the game.\n\n", MAXLINE);
                         Close(sockfd[i]);
                         sockfd[i] = 0;  // Reset sockfd and id
                         memset(userID[i], 0, sizeof(userID[i]));
@@ -596,7 +596,7 @@ void *waitingRoom(void *argv) {
                     char tmp[MAXLINE];
                     for (int j = 0; j < 4; j++) {
                         if (waitingRoomConnfd[j] == 0) {
-                            sprintf(tmp, "P%d : (Empty)    ", j);
+                            sprintf(tmp, "P%d : (Empty)    ", j + 1);
                             strcat(sendline, tmp);
                             continue;
                         }
