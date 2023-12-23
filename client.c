@@ -8,6 +8,7 @@
 #define PURPLE  "\x1b[;35;1m"
 #define CYAN    "\x1b[;36;1m"
 #define WHITE   "\x1b[;37;1m"
+#define SHINING "\x1b[6m"
 
 int line_num = 0, slide_ptr = 0, curr_turn = -1, player_num, selector_pos = 0;
 char sys_msg[15][44], dice_value[5], roll_dices[5], score_table[4][MAXLINE], choosing_table[MAXLINE];
@@ -20,12 +21,12 @@ void od_set_cursor(int x, int y) {
 
 void od_clr_scr() { printf("\x1B[2J"); }
 
-void od_disp_str_red(const char *str)    { printf(RED "%s", str); }
-void od_disp_str_green(const char *str)  { printf(GREEN "%s", str); }
-void od_disp_str_yellow(const char *str) { printf(YELLOW "%s", str); }
-void od_disp_str_blue(const char *str)   { printf(BLUE "%s", str); }
-void od_disp_str_purple(const char *str) { printf(PURPLE "%s", str); }
-void od_disp_str_cyan(const char *str)   { printf(CYAN "%s", str); }
+void od_disp_str_red(const char *str)    { printf(RED "%s" WHITE, str); }
+void od_disp_str_green(const char *str)  { printf(GREEN "%s" WHITE, str); }
+void od_disp_str_yellow(const char *str) { printf(YELLOW "%s" WHITE, str); }
+void od_disp_str_blue(const char *str)   { printf(BLUE "%s" WHITE, str); }
+void od_disp_str_purple(const char *str) { printf(PURPLE "%s" WHITE, str); }
+void od_disp_str_cyan(const char *str)   { printf(CYAN "%s" WHITE, str); }
 void od_disp_str_white(const char *str)  { printf(WHITE "%s", str); }
 
 int getch() {
@@ -64,7 +65,7 @@ int getch() {
 
 void putxy(int x, int y, char *str, char *color) {
     od_set_cursor(x, y);
-    printf("%s%s\n", color, str);
+    printf("%s%s" WHITE, color, str);
     fflush(stdout);
 }
 
@@ -295,7 +296,7 @@ void print_score_data(int turn, char *score, char *color) {
 
         if (pos == 9) pos = 10; // skip "LOWER SECTION" row
 
-        if (strcmp(color, GREEN) == 0) {
+        if (strcmp(color, SHINING) == 0) {
             if (strstr(data, "-")) {
                 pos++;
                 data = strtok(NULL, ",");
@@ -404,9 +405,9 @@ void xchg_data(FILE *fp, int sockfd) {
                 for (int i = 0; i < 5; i++) draw_dice_content(i + 1, dice_value[i] - '0', WHITE);
                 sprintf(msg, "Player %d rolled: %c %c %c %c %c\n", curr_turn + 1, dice_value[0], dice_value[1], dice_value[2], dice_value[3], dice_value[4]);
                 put_sys_msg(msg);
-                print_score_data(curr_turn, tmp_table, GREEN);
+                print_score_data(curr_turn, tmp_table, SHINING);
                 cmd_flag = 1;
-                move_selector(-1);
+                if (curr_turn == player_num) move_selector(-1);
             }
             else if (recvline[0] == 'a' && recvline[1] == ':') { // all table
                 int pos = 0, lineStart = 2;
@@ -490,6 +491,7 @@ void xchg_data(FILE *fp, int sockfd) {
                 sprintf(sendline, "d:%d\n", selector_pos);
                 Writen(sockfd, sendline, strlen(sendline));
                 cmd_flag = 0;
+                od_set_cursor(47, 1);
                 break;
             case 'q':
             case 'Q':
@@ -514,6 +516,7 @@ void xchg_data(FILE *fp, int sockfd) {
                             break;
                     }
                 }
+                od_set_cursor(47, 1);
                 break;
             }
         }
@@ -544,6 +547,7 @@ void xchg_data(FILE *fp, int sockfd) {
                             break;
                     }
                 }
+                od_set_cursor(47, 1);
                 break;
             }
         }
