@@ -8,7 +8,7 @@
 #define PURPLE  "\x1b[;35;1m"
 #define CYAN    "\x1b[;36;1m"
 #define WHITE   "\x1b[;37;1m"
-#define SHINING "\x1b[6m"
+#define SHINING "\x1b[;32;1m\x1b[6m"
 
 int line_num = 0, slide_ptr = 0, curr_turn = -1, player_num, selector_pos = 0;
 char sys_msg[15][44], dice_value[5], roll_dices[5], score_table[4][MAXLINE], choosing_table[MAXLINE];
@@ -248,7 +248,7 @@ void put_sys_msg(char *str) {
     int start = line_num > 15 ? line_num % 15 : 0;
     for (int i = 0; i < 15; i++) {
         int idx = (start + i) % 15;
-        putxy(22 + i, 79, "                                          ", YELLOW);
+        putxy(22 + i, 79, "                                           ", YELLOW);
         putxy(22 + i, 79, sys_msg[idx], YELLOW);
     }
     od_set_cursor(47, 1);
@@ -360,7 +360,7 @@ void xchg_data(FILE *fp, int sockfd) {
     int maxfdp1;
     char sendline[MAXLINE], recvline[MAXLINE], msg[MAXLINE];
     int key, dice_chosen[5] = {0}, change_dice_times = 0;
-    int login_flag = 1, cmd_flag = 0;
+    int login_flag = 1, cmd_flag = 0, restart_flag = 0;
 
     fd_set rset;
     FD_ZERO(&rset);
@@ -393,8 +393,11 @@ void xchg_data(FILE *fp, int sockfd) {
                     data = strtok(NULL, "\n");
                 }
                 
-                if (strstr(recvline, "left the room") != NULL)
+                if (strstr(recvline, "winner") != NULL || strstr(recvline, "Winner") != NULL) {
                     cmd_flag = 0;
+                    restart_flag = 1;
+                }
+                    
                 if (strstr(recvline, "See you") != NULL)
                     break;
             }
@@ -407,7 +410,9 @@ void xchg_data(FILE *fp, int sockfd) {
                 put_sys_msg(msg);
                 print_score_data(curr_turn, tmp_table, SHINING);
                 cmd_flag = 1;
+                
                 if (curr_turn == player_num) move_selector(-1);
+                else change_dice_times = 0;
             }
             else if (recvline[0] == 'a' && recvline[1] == ':') { // all table
                 int pos = 0, lineStart = 2;
@@ -433,7 +438,7 @@ void xchg_data(FILE *fp, int sockfd) {
                 }
             }
             else {
-                printf("recv: %s", recvline);
+                printf("%s", recvline);
                 fflush(stdout);
             }
         }
@@ -459,6 +464,7 @@ void xchg_data(FILE *fp, int sockfd) {
                     sprintf(msg, "You have changed twice!\n");
                     put_sys_msg(msg);
                 }
+                move_selector(0);
                 break;
             case 'c':
             case 'C':
@@ -476,7 +482,8 @@ void xchg_data(FILE *fp, int sockfd) {
                 else {
                     sprintf(msg, "You haven't chosen any dice!\n");
                     put_sys_msg(msg);
-                }      
+                }  
+                move_selector(0);    
                 break;
             case 'w':
             case 'W':                
@@ -548,6 +555,22 @@ void xchg_data(FILE *fp, int sockfd) {
                     }
                 }
                 od_set_cursor(47, 1);
+                break;
+            }
+        }
+
+        if (restart_flag) {
+            key = getch();
+            switch (key) {
+            case '1':
+                Writen(sockfd, "1\n", 3);
+                restart_flag = 0;
+                login_flag = 1;
+                od_clr_scr();
+                break;
+            case '2':
+                Writen(sockfd, "2\n", 3);
+                restart_flag = 0;
                 break;
             }
         }
