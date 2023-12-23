@@ -26,6 +26,7 @@ int logout(char ID[MAXLINE]);
 void dice(char diceToRoll[6], char *diceValue);
 int logoutAll();
 void countScore(char diceValue[6], int *scoreTable);
+int updateHistory(char ID[MAXLINE], int gameType, int win);
 
 int main(int argc, char **argv) {
     // Logout all users
@@ -231,7 +232,7 @@ int main(int argc, char **argv) {
 
 void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addSockfd, char *IDBuffer, int *disconnect) {
     char sendline[MAXLINE], recvline[MAXLINE], diceValue[6] = {0}, diceToRoll[6] = {0};
-    int maxfdp1 = -1, stepCount = -1, turn = -1, oneTurnDoneFlag = 1, scoreTable[19], totalScoreTable[4][19], first = 1, endGame = 0;
+    int maxfdp1 = -1, stepCount = -1, turn = -1, oneTurnDoneFlag = 1, scoreTable[19], totalScoreTable[4][19], first = 1, endGame = 0, gameType;
     memset(totalScoreTable, -1, sizeof(totalScoreTable));
     memset(scoreTable, -1, sizeof(scoreTable));
     // Initialize yahtzee bonus
@@ -239,9 +240,15 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
     totalScoreTable[1][16] = 0;
     totalScoreTable[2][16] = 0;
     totalScoreTable[3][16] = 0;
+    //Check gameType
+    int numOfPlayer = 0;
+    for (int i = 0; i < 4; i++) {
+        if (sockfd[i] == 0) continue;
+        numOfPlayer++;
+    }
+    gameType = numOfPlayer;
     fd_set rset;
     FD_ZERO(&rset);
-    int numOfPlayer = 0;
     for (;;) {
         if (first) goto NEXTTURN;
         // Fd set
@@ -258,10 +265,10 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
         if(numOfPlayer == 1){
             for(int i = 0; i < 4; i++){
                 if(sockfd[i] == 0) continue;
-                Writen(sockfd[i], "m:You are the last player. So you are the winner.\n[1] Play one more game. [2] Exit game.\n\n", MAXLINE);
+                Writen(sockfd[i], "m:You are the last player.\n\nSo you are the winner.\n\n[1] Play one more game. [2] Exit game.\n\n", MAXLINE);
                 endGame = 1;
+                updateHistory(userID[i], gameType, 1);
             }
-            
         }
         if (numOfPlayer == 0) break;
         maxfdp1 += 1;
@@ -448,14 +455,13 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                     maxScore = max(maxScore, totalScoreTable[i][18]);
                 }
                 // Find number of winner
-
                 char sendWinner[MAXLINE];
                 memset(sendWinner, 0, sizeof(sendWinner));
                 for (int i = 0; i < 4; i++) {
                     if (sockfd[i] == 0) continue;
 
                     if (totalScoreTable[i][18] == maxScore) {
-                        winner[count++] = i;
+                        winner[i] = 1;
                     }
                 }
                 if (count)
@@ -463,9 +469,15 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                 else
                     strcat(sendWinner, "m:Winner is ");
                 for (int i = 0; i < 4; i++) {
-                    if (winner[i] == -1) break;
-                    strcat(sendWinner, userID[winner[i]]);
+                    if (sockfd[i] == 0) continue;
+
+                    if(winner[i] == -1){
+                        updateHistory(userID[i], gameType, 0);
+                        continue;
+                    }
+                    strcat(sendWinner, userID[i]);
                     strcat(sendWinner, " ");
+                    updateHistory(userID[i], gameType, 1);
                 }
                 strcat(sendWinner, "\n");
                 sprintf(sendline, "%s\n[1] Play one more game. [2] Exit game.\n\n", sendWinner);
@@ -735,6 +747,42 @@ int logout(char ID[MAXLINE]) {
     fscanf(f, "%s\n%d %d\n%d %d\n%d %d\n%d", &password, &twoWin, &twoPlayed, &threeWin, &threePlayed, &fourWin, &fourPlayed, &Using);
     fclose(f);
     f = fopen(dataPath, "w");  // Clean file
+    sprintf(fileContent, "%s\n%d %d\n%d %d\n%d %d\n%d", password, twoWin, twoPlayed, threeWin, threePlayed, fourWin, fourPlayed, 0);
+    fprintf(f, fileContent);
+    printf("Logout %s successfully.\n", ID);
+    fclose(f);
+    return 1;
+}
+
+int updateHistory(char ID[MAXLINE], int gameType, int win) {
+    FILE *f;
+    char dataPath[MAXLINE], password[MAXLINE], fileContent[MAXLINE];
+    int twoWin, twoPlayed, threeWin, threePlayed, fourWin, fourPlayed, Using;
+    sprintf(dataPath, "userdata/%s.txt", ID);
+    f = fopen(dataPath, "r");
+    if (f == NULL) return 0;
+    fscanf(f, "%s\n%d %d\n%d %d\n%d %d\n%d", &password, &twoWin, &twoPlayed, &threeWin, &threePlayed, &fourWin, &fourPlayed, &Using);
+    fclose(f);
+    f = fopen(dataPath, "w");  // Clean file
+    if(win == 1 && gameType == 2){
+        twoWin++;
+    } 
+    else if(win == 1 && gameType == 3){
+        threeWin++;
+    }
+    else if(win == 1 && gameType == 4){
+        fourWin++;
+    }
+
+    if(gameType == 2){
+        twoPlayed++;
+    }
+    else if(gameType == 3){
+        threePlayed++;
+    }
+    else if(gameType == 4){
+        fourPlayed++;
+    }
     sprintf(fileContent, "%s\n%d %d\n%d %d\n%d %d\n%d", password, twoWin, twoPlayed, threeWin, threePlayed, fourWin, fourPlayed, 0);
     fprintf(f, fileContent);
     printf("Logout %s successfully.\n", ID);
