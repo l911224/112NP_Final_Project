@@ -258,7 +258,7 @@ void draw_cmd_board(int x, int y) {
     putxy(x    , y, "┌─────────────────────────────┐", WHITE);
     putxy(x + 1, y, "│ [ 1-5 ] Choose dices        │", WHITE);
     putxy(x + 2, y, "│ [  C  ] Change chosen dices │", WHITE);
-    putxy(x + 3, y, "│ [ U/D ] Move up / Move down │", WHITE);
+    putxy(x + 3, y, "│ [ W/S ] Move up / Move down │", WHITE);
     putxy(x + 4, y, "│ [Enter] Fill in             │", WHITE);
     putxy(x + 5, y, "│                             │", WHITE);
     putxy(x + 6, y, "│ [  Q  ] Quit Game           │", WHITE);
@@ -478,12 +478,12 @@ void xchg_data(FILE *fp, int sockfd) {
                     put_sys_msg(msg);
                 }      
                 break;
-            case 'u':
-            case 'U':                
+            case 'w':
+            case 'W':                
                 move_selector(-1);
                 break;
-            case 'd':
-            case 'D':
+            case 's':
+            case 'S':
                 move_selector(1);
                 break;
             case '\n': // Enter
