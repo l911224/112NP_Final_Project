@@ -443,11 +443,11 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
             memset(sendline, 0, sizeof(sendline));
             stepCount++;
             // Check game status
-            if (stepCount == 4 * 1) {  // End game check, modify here to shorten the process normal size = 4 * 13
+            if (stepCount == 4 * 13) {  // End game check, modify here to shorten the process normal size = 4 * 13
                 // Find max score
 
                 // For test only!!!
-                totalScoreTable[0][18] = 10;
+                //totalScoreTable[0][18] = 10;
                 endGame = 1;
                 int maxScore = -100, winner[4] = {-1, -1, -1, -1}, count = 0;
                 for (int i = 0; i < 4; i++) {
