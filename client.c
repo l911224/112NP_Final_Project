@@ -418,6 +418,7 @@ void xchg_data(FILE *fp, int sockfd) {
                 else {
                     sprintf(msg, "PLAYER %d rolled: %c %c %c %c %c\n", curr_turn + 1, dice_value[0], dice_value[1], dice_value[2], dice_value[3], dice_value[4]);
                     put_sys_msg(msg);
+                    print_turn_flag = 0;
                 }
                 print_score_data(curr_turn, tmp_table, SHINING);
                 cmd_flag = 1;
