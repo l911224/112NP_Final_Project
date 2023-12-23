@@ -360,7 +360,7 @@ void xchg_data(FILE *fp, int sockfd) {
     int maxfdp1;
     char sendline[MAXLINE], recvline[MAXLINE], msg[MAXLINE];
     int key, dice_chosen[5] = {0}, change_dice_times = 0;
-    int login_flag = 1, cmd_flag = 0, restart_flag = 0;
+    int login_flag = 1, cmd_flag = 0, restart_flag = 0, print_turn_flag = 0;
 
     fd_set rset;
     FD_ZERO(&rset);
@@ -406,8 +406,19 @@ void xchg_data(FILE *fp, int sockfd) {
                 sscanf(recvline + 2, "%d\nv:%s\ns:%s\n", &curr_turn, dice_value, choosing_table);
                 strcpy(tmp_table, choosing_table);
                 for (int i = 0; i < 5; i++) draw_dice_content(i + 1, dice_value[i] - '0', WHITE);
-                sprintf(msg, "Player %d rolled: %c %c %c %c %c\n", curr_turn + 1, dice_value[0], dice_value[1], dice_value[2], dice_value[3], dice_value[4]);
-                put_sys_msg(msg);
+                if (curr_turn == player_num) {
+                    if (!print_turn_flag) {
+                        sprintf(msg, RED "It's your turn!\n");
+                        put_sys_msg(msg);
+                        print_turn_flag = 1;
+                    }
+                    sprintf(msg, RED "PLAYER %d (YOU) rolled: %c %c %c %c %c\n", curr_turn + 1, dice_value[0], dice_value[1], dice_value[2], dice_value[3], dice_value[4]);
+                    put_sys_msg(msg);
+                }
+                else {
+                    sprintf(msg, "PLAYER %d rolled: %c %c %c %c %c\n", curr_turn + 1, dice_value[0], dice_value[1], dice_value[2], dice_value[3], dice_value[4]);
+                    put_sys_msg(msg);
+                }
                 print_score_data(curr_turn, tmp_table, SHINING);
                 cmd_flag = 1;
                 
@@ -418,7 +429,7 @@ void xchg_data(FILE *fp, int sockfd) {
                 int pos = 0, lineStart = 2;
 
                 for (int i = lineStart; recvline[i] != '\0'; i++) {
-                    if (recvline[i] == ';' || recvline[i+1] == '\0') {
+                    if (recvline[i] == ' ' || recvline[i+1] == '\0') {
                         char lineData[MAXLINE];
                         int lineLength = (recvline[i+1] == '\0') ? (i+1 - lineStart) : (i - lineStart);
                         strncpy(lineData, recvline + lineStart, lineLength);
@@ -461,7 +472,7 @@ void xchg_data(FILE *fp, int sockfd) {
                     dice_chosen[key - '0' - 1] = dice_chosen[key - '0' - 1] ? 0 : 1;
                 }
                 else if (change_dice_times == 2) {
-                    sprintf(msg, "You have changed twice!\n");
+                    sprintf(msg, RED "You have changed twice!\n");
                     put_sys_msg(msg);
                 }
                 move_selector(0);
@@ -476,11 +487,11 @@ void xchg_data(FILE *fp, int sockfd) {
                     for (int i = 0; i < 5; i++) dice_chosen[i] = 0;
                 }
                 else if (change_dice_times == 2) {
-                    sprintf(msg, "You have changed twice!\n");
+                    sprintf(msg, RED "You have changed twice!\n");
                     put_sys_msg(msg);
                 }
                 else {
-                    sprintf(msg, "You haven't chosen any dice!\n");
+                    sprintf(msg, RED "You haven't chosen any dice!\n");
                     put_sys_msg(msg);
                 }  
                 move_selector(0);    
@@ -517,7 +528,7 @@ void xchg_data(FILE *fp, int sockfd) {
                             break;
                         case 'n':
                         case 'N':
-                            sprintf(msg, "Game continue\n");
+                            sprintf(msg, "Game continue.\n");
                             put_sys_msg(msg);
                             chose_flag = 1;
                             break;
@@ -548,7 +559,7 @@ void xchg_data(FILE *fp, int sockfd) {
                             break;
                         case 'n':
                         case 'N':
-                            sprintf(msg, "Game continue\n");
+                            sprintf(msg, "Game continue.\n");
                             put_sys_msg(msg);
                             chose_flag = 1;
                             break;
