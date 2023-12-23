@@ -423,7 +423,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                                     sprintf(tmp, "%d,", totalScoreTable[j][k]);
                                     strcat(sendScore, tmp);
                                 }
-                                sendScore[strlen(sendScore) - 1] = ';';
+                                sendScore[strlen(sendScore) - 1] = ' ';
                             }
                             for (int j = 0; j < 4; j++) {
                                 if (sockfd[j] == 0) continue;
@@ -519,11 +519,6 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
         }
     }
 
-    for (int i = 0; i < 4; i++) {  // logout
-        logout(userID[i]);
-        if (sockfd[i] == 0) continue;
-        Close(sockfd[i]);
-    }
     return;
 }
 
@@ -783,7 +778,7 @@ int updateHistory(char ID[MAXLINE], int gameType, int win) {
     else if(gameType == 4){
         fourPlayed++;
     }
-    sprintf(fileContent, "%s\n%d %d\n%d %d\n%d %d\n%d", password, twoWin, twoPlayed, threeWin, threePlayed, fourWin, fourPlayed, 0);
+    sprintf(fileContent, "%s\n%d %d\n%d %d\n%d %d\n%d", password, twoWin, twoPlayed, threeWin, threePlayed, fourWin, fourPlayed, 1);
     fprintf(f, fileContent);
     printf("Logout %s successfully.\n", ID);
     fclose(f);
