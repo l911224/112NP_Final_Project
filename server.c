@@ -16,7 +16,7 @@ int numOfMember = 0;
 int waitingRoomConnfd[4] = {0};
 char waitingRoomUserID[4][MAXLINE];
 int startGame = 0;
-struct timeval timeout = {0, 100};
+struct timeval timeout = {0, 10};
 
 void sigchld_handler(int signo);
 char *xchg_user_data(int sockfd);
@@ -254,6 +254,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
         // Fd set
         memset(sendline, 0, sizeof(sendline));
         memset(recvline, 0, sizeof(recvline));
+        FD_ZERO(&rset);
         numOfPlayer = 0;
         maxfdp1 = -1;
         for (int i = 0; i < 4; i++) {
@@ -268,6 +269,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                 Writen(sockfd[i], "m:You are the last player.\n\nSo you are the winner.\n\n[1] Play one more game. [2] Exit game.\n\n", MAXLINE);
                 endGame = 1;
                 updateHistory(userID[i], gameType, 1);
+                break;
             }
         }
         if (numOfPlayer == 0) break;
@@ -280,13 +282,13 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                 continue;
             }
             // Handle other select error
-            perror("select error");
-            break;
+            perror("select error!!!");
+            continue;
         }
         // Recv messeages
         for (int i = 0; i < 4; i++) {
             if (FD_ISSET(sockfd[i], &rset)) {
-                printf("got message\n");
+                printf("got message from player %d\n", i + 1);
                 if (endGame) {                                                                  // Game is over
                     if (Read(sockfd[i], recvline, MAXLINE) == 0 || !strcmp(recvline, "2\n")) {  // Player do not want to play next game
                         printf("Player %d wants to exit game\n", i + 1);
@@ -302,6 +304,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         logout(userID[i]);  // logout
                         sockfd[i] = 0;      // Reset sockfd and id
                         memset(userID[i], 0, sizeof(userID[i]));
+                        break;
                     } else if (!strcmp(recvline, "1\n")) {  // Add player to waiting room
                         printf("Player %d wants to play one more game\n", i + 1);
                         *addSockfd = sockfd[i];
@@ -312,8 +315,10 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         Close(sockfd[i]);
                         sockfd[i] = 0;  // Reset sockfd and id
                         memset(userID[i], 0, sizeof(userID[i]));
+                        break;
                     } else {
                         Writen(sockfd[i], "m:Illegal operation. Please try again.\n\n", MAXLINE);
+                        break;
                     }
                 } else {
                     if (Read(sockfd[i], recvline, MAXLINE) == 0 || recvline[0] == 'Q') {  // Deal with ctrl + c and 'Q'
@@ -329,7 +334,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         logout(userID[i]);  // logout
                         sockfd[i] = 0;      // Reset sockfd and id
                         memset(userID[i], 0, sizeof(userID[i]));
-                        continue;
+                        break;
                     } else if (recvline[0] == 'r' && recvline[1] == ':') {  // r:01101 means to roll NO.2 3 5 dices
                         // Check player legal or not
                         if (i != turn) {
@@ -360,6 +365,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                             if (sockfd[j] == 0) continue;
                             Writen(sockfd[j], sendline, MAXLINE);
                         }
+                        break;
                     } else if (recvline[0] == 'd' && recvline[1] == ':') {  // d:10 fill the 10th table
                         // Check player legal or not
                         if (i != turn) {
@@ -430,6 +436,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                                 Writen(sockfd[j], sendScore, MAXLINE);
                             }
                             printf("total score table sent\n");
+                            break;
                         }
                     }
                 }
@@ -443,7 +450,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
             memset(sendline, 0, sizeof(sendline));
             stepCount++;
             // Check game status
-            if (stepCount == 4 * 13) {  // End game check, modify here to shorten the process normal size = 4 * 13
+            if (stepCount == 4 * 1) {  // End game check, modify here to shorten the process normal size = 4 * 13
                 // Find max score
 
                 // For test only!!!
@@ -560,11 +567,11 @@ void *waitingRoom(void *argv) {
                     logout(waitingRoomUserID[i]);  // logout
                     waitingRoomConnfd[i] = 0;      // Reset sockfd and id
                     memset(waitingRoomUserID[i], 0, sizeof(waitingRoomUserID[i]));
-                    continue;
+                    break;
                 } else if (!strcmp(recvline, "1\n")) {  // Start a game.
                     if (numOfMember < 2) {              // Check player number is enough or not
                         Writen(waitingRoomConnfd[i], "Number of players are not enuogh. Wait for 1-3 more players to start!\n\n", MAXLINE);
-                        continue;
+                        break;
                     }
                 GAMESTART:
                     for (int j = 0; j < 4; j++) {
@@ -586,7 +593,7 @@ void *waitingRoom(void *argv) {
                             threeWin, threePlayed, fourWin, fourPlayed);
                     fclose(f);
                     Writen(waitingRoomConnfd[i], sendline, MAXLINE);
-                    continue;
+                    break;
                 } else if (!strcmp(recvline, "3\n")) {
                     char tmp[MAXLINE];
                     for (int j = 0; j < 4; j++) {
@@ -600,7 +607,7 @@ void *waitingRoom(void *argv) {
                     }
                     strcat(sendline, "\n\n");
                     Writen(waitingRoomConnfd[i], sendline, MAXLINE);
-                    continue;
+                    break;
                 }
 
                 sprintf(sendline, "(%s) %s", waitingRoomUserID[i], recvline);
