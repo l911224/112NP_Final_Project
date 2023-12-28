@@ -17,6 +17,10 @@ int waitingRoomConnfd[4] = {0};
 char waitingRoomUserID[4][MAXLINE];
 int startGame = 0;
 struct timeval timeout = {0, 10};
+struct thread_sockfd_data{
+    int sockfd[4];
+    int *flag;
+};
 
 void sigchld_handler(int signo);
 char *xchg_user_data(int sockfd);
@@ -27,6 +31,7 @@ void dice(char diceToRoll[6], char *diceValue);
 int logoutAll();
 void countScore(char diceValue[6], int *scoreTable);
 int updateHistory(char ID[MAXLINE], int gameType, int win);
+void *timer(void *argv);
 
 int main(int argc, char **argv) {
     // Logout all users
@@ -60,19 +65,19 @@ int main(int argc, char **argv) {
     int *connfdFlag = NULL, *addSockfd = NULL, *disconnect = NULL;
     char *IDBuffer = NULL;
     // Attach the shm
-    if ((connfdFlag = (int*)shmat(shmFlag, NULL, 0)) == -1) {
+    if (*(connfdFlag = (int*)shmat(shmFlag, NULL, 0)) == -1) {
         perror("shmat");
         exit(1);
     }
-    if ((addSockfd = (int*)shmat(shmAdd, NULL, 0)) == -1) {
+    if (*(addSockfd = (int*)shmat(shmAdd, NULL, 0)) == -1) {
         perror("shmat");
         exit(1);
     }
-    if ((disconnect = (int*)shmat(shmDis, NULL, 0)) == -1) {
+    if (*(disconnect = (int*)shmat(shmDis, NULL, 0)) == -1) {
         perror("shmat");
         exit(1);
     }
-    if ((IDBuffer = (char *)shmat(shmUserID, NULL, 0)) == -1) {
+    if (*(IDBuffer = (char *)shmat(shmUserID, NULL, 0)) == -1) {
         perror("shmat");
         exit(1);
     }
@@ -88,7 +93,7 @@ int main(int argc, char **argv) {
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
     //servaddr.sin_addr.s_addr = inet_addr("172.1.1.12");
     servaddr.sin_port = htons(SERV_PORT + 3);
-    Bind(listenfd, (struct sockaddr_in*)&servaddr, sizeof(servaddr));
+    Bind(listenfd, (SA *) &servaddr, sizeof(servaddr));
     Listen(listenfd, LISTENQ);
 
 
@@ -136,7 +141,7 @@ int main(int argc, char **argv) {
         if (*connfdFlag != -10) {  // Find space and add user to waiting room
             if (*connfdFlag >= 1000) {
                 connfd[*connfdFlag - 1000] = 0;
-                memset(IDBuffer, 0, sizeof(IDBuffer));
+                memset(IDBuffer, 0, sizeof(char[MAXLINE]));
                 *connfdFlag = -10;
                 printf("Connfd reset\n");
                 continue;
@@ -165,10 +170,10 @@ int main(int argc, char **argv) {
                 Writen(waitingRoomConnfd[i], sendline, MAXLINE);
             }
             *connfdFlag = -10;
-            memset(IDBuffer, 0, sizeof(IDBuffer));
+            memset(IDBuffer, 0, sizeof(char[MAXLINE]));
             continue;
         }
-        char sendline[MAXLINE], recvline[MAXLINE];
+
         FD_ZERO(&rset);
         FD_SET(listenfd, &rset);
         maxfdp1 = -1;
@@ -232,7 +237,7 @@ int main(int argc, char **argv) {
 
 void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addSockfd, char *IDBuffer, int *disconnect) {
     char sendline[MAXLINE], recvline[MAXLINE], diceValue[6] = {0}, diceToRoll[6] = {0};
-    int maxfdp1 = -1, stepCount = -1, turn = -1, oneTurnDoneFlag = 1, scoreTable[19], totalScoreTable[4][19], first = 1, endGame = 0, gameType;
+    int maxfdp1 = -1, stepCount = -1, turn = -1, oneTurnDoneFlag = 1, scoreTable[19], totalScoreTable[4][19], first = 1, endGame = 0, gameType, timerFlag = 0;
     memset(totalScoreTable, -1, sizeof(totalScoreTable));
     memset(scoreTable, -1, sizeof(scoreTable));
     // Initialize yahtzee bonus
@@ -348,7 +353,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         sscanf(recvline, "%*[^:]:%s\n", diceToRoll);
                         diceToRoll[5] = '\0';
                         memset(scoreTable, -1, sizeof(scoreTable));
-                        dice(diceToRoll, &diceValue);
+                        dice(diceToRoll, diceValue);
                         printf("Rolled : %s\n", diceValue);
                         countScore(diceValue, scoreTable);
                         char sendScore[MAXLINE] = {0};
@@ -381,6 +386,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         if (totalScoreTable[turn][toFill] != -1 || toFill == 6 || toFill == 7 || toFill == 8 || toFill == 16 || toFill == 17 || toFill == 18) {  // Illegal operation
                             //Writen(sockfd[i], "w:Illegal operation.\n\n", MAXLINE);
                         } else {  // Fill the totalScoreTable
+                            timerFlag = 1;
                             totalScoreTable[turn][toFill] = scoreTable[toFill];
                             oneTurnDoneFlag = 1;
                             // Check players totalScoreTable bonus
@@ -438,6 +444,23 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                             printf("total score table sent\n");
                             break;
                         }
+                    }
+                    else if(recvline[0] == 'c' && recvline[1] == ':'){  // send dice status
+                        for(int j = 0; j < 4; j++){
+                            if(sockfd[j] == 0 || i == j) continue;
+                            Writen(sockfd[j], recvline, sockfd[j]);
+                        }
+                        break;
+                    }
+                    else if(!strcmp(recvline, "start\n")){  // start timer
+                        struct thread_sockfd_data data;
+                        data.flag = &timerFlag;
+                        for(int j = 0; j < 4; j++){
+                            data.sockfd[j] = sockfd[j];
+                        }
+                        pthread_t t;
+                        pthread_create(&t, NULL, timer, (void*) &data);
+                        break;
                     }
                 }
             }
@@ -506,7 +529,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
             memset(diceValue, 0, sizeof(diceValue));
             memset(diceToRoll, 0, sizeof(diceToRoll));
             memset(scoreTable, -1, sizeof(scoreTable));
-            dice("11111", &diceValue);
+            dice("11111", diceValue);
             printf("Rolled : %s\n", diceValue);
             countScore(diceValue, scoreTable);
             char sendScore[MAXLINE] = {0};
@@ -523,6 +546,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                 if (sockfd[i] == 0) continue;
                 Writen(sockfd[i], sendline, MAXLINE);
             }
+            timerFlag = 0; // temperary , need start sign
         }
     }
 
@@ -588,7 +612,7 @@ void *waitingRoom(void *argv) {
                     FILE *f;
                     f = fopen(dataPath, "r");
                     if (f == NULL) perror("File open error");
-                    fscanf(f, "%s%d %d\n%d %d\n%d %d\n%d", &password, &twoWin, &twoPlayed, &threeWin, &threePlayed, &fourWin, &fourPlayed, &Using);
+                    fscanf(f, "%s%d %d\n%d %d\n%d %d\n%d", password, &twoWin, &twoPlayed, &threeWin, &threePlayed, &fourWin, &fourPlayed, &Using);
                     sprintf(sendline, "Your game history are showed below (win / played):\n\n2 players game : %d / %d\n3 players game : %d / %d\n4 players game : %d / %d\n\n", twoWin, twoPlayed,
                             threeWin, threePlayed, fourWin, fourPlayed);
                     fclose(f);
@@ -641,7 +665,6 @@ CHOOSE:
     n = Read(sockfd, recvline, MAXLINE);
     if (n == 0) goto DISCONNECT;
     if (!strcmp(recvline, "1\n")) {  // Create new account and check the ID exists or not
-    NEW:
         char password[MAXLINE], dataPath[MAXLINE], fileContent[MAXLINE];
         Writen(sockfd, "Enter your ID : ", MAXLINE);
         n = Read(sockfd, ID, MAXLINE);
@@ -672,7 +695,6 @@ CHOOSE:
         Writen(sockfd, "\nCreate successfully!\n\n", MAXLINE);
         fclose(f);
     } else if (!strcmp(recvline, "2\n")) {  // Login account and show winning rate
-    LOGIN:
         printf("Login\n");
         char password[MAXLINE], dataPath[MAXLINE], fileContent[MAXLINE];
         Writen(sockfd, "Enter your ID : ", MAXLINE);
@@ -687,7 +709,7 @@ CHOOSE:
             Writen(sockfd, "ID does not exist. Please create a new one or login another ID\n\n", MAXLINE);
             goto CHOOSE;
         }
-        fscanf(f, "%s%d %d\n%d %d\n%d %d\n%d", &password, &twoWin, &twoPlayed, &threeWin, &threePlayed, &fourWin, &fourPlayed, &Using);
+        fscanf(f, "%s%d %d\n%d %d\n%d %d\n%d", password, &twoWin, &twoPlayed, &threeWin, &threePlayed, &fourWin, &fourPlayed, &Using);
         if (Using) {
             Writen(sockfd, "This ID is login now, please create a new one or login another ID\n\n", MAXLINE);
             goto CHOOSE;
@@ -703,10 +725,7 @@ CHOOSE:
             printf("pw:%s and revc:%s", password, recvline);
             goto PW_AGAIN;
         }
-        float winRate2, winRate3, winRate4;
-        winRate2 = (!twoPlayed) ? 0 : twoWin / twoPlayed;
-        winRate3 = (!threePlayed) ? 0 : threeWin / threePlayed;
-        winRate4 = (!fourPlayed) ? 0 : fourWin / fourPlayed;
+
         fclose(f);
         f = fopen(dataPath, "w");
         sprintf(fileContent, "%s\n%d %d\n%d %d\n%d %d\n%d", password, twoWin, twoPlayed, threeWin, threePlayed, fourWin, fourPlayed, 1);
@@ -746,7 +765,7 @@ int logout(char ID[MAXLINE]) {
     sprintf(dataPath, "userdata/%s.txt", ID);
     f = fopen(dataPath, "r");
     if (f == NULL) return 0;
-    fscanf(f, "%s\n%d %d\n%d %d\n%d %d\n%d", &password, &twoWin, &twoPlayed, &threeWin, &threePlayed, &fourWin, &fourPlayed, &Using);
+    fscanf(f, "%s\n%d %d\n%d %d\n%d %d\n%d", password, &twoWin, &twoPlayed, &threeWin, &threePlayed, &fourWin, &fourPlayed, &Using);
     fclose(f);
     f = fopen(dataPath, "w");  // Clean file
     sprintf(fileContent, "%s\n%d %d\n%d %d\n%d %d\n%d", password, twoWin, twoPlayed, threeWin, threePlayed, fourWin, fourPlayed, 0);
@@ -763,7 +782,7 @@ int updateHistory(char ID[MAXLINE], int gameType, int win) {
     sprintf(dataPath, "userdata/%s.txt", ID);
     f = fopen(dataPath, "r");
     if (f == NULL) return 0;
-    fscanf(f, "%s\n%d %d\n%d %d\n%d %d\n%d", &password, &twoWin, &twoPlayed, &threeWin, &threePlayed, &fourWin, &fourPlayed, &Using);
+    fscanf(f, "%s\n%d %d\n%d %d\n%d %d\n%d", password, &twoWin, &twoPlayed, &threeWin, &threePlayed, &fourWin, &fourPlayed, &Using);
     fclose(f);
     f = fopen(dataPath, "w");  // Clean file
     if(win == 1 && gameType == 2){
@@ -962,4 +981,37 @@ void countScore(char diceValue[6], int *scoreTable) {
     }
     scoreTable[15] = tmp;
     printf("countScore success\n");
+}
+
+void *timer(void *argv){
+    struct thread_sockfd_data *data = (struct thread_sockfd_data *) argv;
+    int sec = 30;
+    char sendline[MAXLINE];
+    time_t cur_time = 0;
+    time_t pre_time = 0;
+    
+    time(&cur_time);
+    pre_time = cur_time;
+    sprintf(sendline, "l:%d\n", sec);
+    for(int i = 0; i < 4; i++){
+        if(data->sockfd[i] == 0) continue;
+        Writen(data->sockfd[i], sendline, MAXLINE);
+    }
+
+    while(sec > 0){
+        if(*data->flag == 1) goto EXIT;
+        time(&cur_time);
+        if(cur_time != pre_time){
+            pre_time = cur_time;
+            sec--;
+            sprintf(sendline, "l:%d\n", sec);
+            for(int i = 0; i < 4; i++){
+                if(data->sockfd[i] == 0) continue;
+                Writen(data->sockfd[i], sendline, MAXLINE);
+            }
+        }
+    }
+    EXIT:
+    pthread_detach(pthread_self());
+    return;
 }

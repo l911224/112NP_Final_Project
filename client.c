@@ -1,5 +1,6 @@
 #include "unp.h"
 #include <termios.h>
+#include <time.h>
 
 #define RED     "\x1b[;31;1m"
 #define GREEN   "\x1b[;32;1m"
@@ -588,6 +589,7 @@ void xchg_data(FILE *fp, int sockfd) {
         }
     } 
 }
+
 
 int main(int argc, char **argv) {
     int sockfd;
