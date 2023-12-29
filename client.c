@@ -496,6 +496,7 @@ void xchg_data(FILE *fp, int sockfd) {
                     cmd_flag = 0;
                     od_set_cursor(47, 1);
                 }
+                continue;
             }
             // else if (recvline[0] == 'c' && recvline[1] == ':') { // dice status
             //     for (int i = 0; i < 5; i++) {
@@ -506,6 +507,7 @@ void xchg_data(FILE *fp, int sockfd) {
                 od_set_cursor(47, 1);
                 printf("%s", recvline);
                 fflush(stdout);
+                continue;
             }
         }
 
