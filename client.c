@@ -486,10 +486,9 @@ void xchg_data(FILE *fp, int sockfd) {
                     putxy(42, 115, recvline + 2, YELLOW);
                 }
                 else if (time_left < 10) {
-                    char *tmp_time;
-                    sprintf(tmp_time, "0%s", recvline + 2);
                     draw_time_board(38, 109, RED);
-                    putxy(42, 115, tmp_time, RED);
+                    putxy(42, 115, "0", RED);
+                    putxy(42, 116, recvline + 2, RED);
                 }
                 move_selector(0);
 
@@ -500,7 +499,6 @@ void xchg_data(FILE *fp, int sockfd) {
                     cmd_flag = 0;
                     od_set_cursor(47, 1);
                 }
-                continue;
             }
             else if (strstr(recvline, "Welcome") != NULL) {
                 for (int i = 1; i <= 17; i++) {
@@ -549,7 +547,6 @@ void xchg_data(FILE *fp, int sockfd) {
                 printf(CLEARLINE);
                 printf("%s", recvline);
                 fflush(stdout);
-                continue;
             }
         }
 
