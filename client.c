@@ -266,6 +266,17 @@ void draw_cmd_board(int x, int y) {
     putxy(x + 7, y, "└─────────────────────────────┘", WHITE);
 }
 
+void draw_time_board(int x, int y, char *color) {
+    putxy(x    , y, "┌────────────┐", color);
+    putxy(x + 1, y, "│ COUNT DOWN │", color);
+    putxy(x + 2, y, "├────────────┤", color);
+    putxy(x + 3, y, "│            │", color);
+    putxy(x + 4, y, "│            │", color);
+    putxy(x + 5, y, "│   SECOND   │", color);
+    putxy(x + 6, y, "│            │", color);
+    putxy(x + 7, y, "└────────────┘", color);
+}
+
 void start_game() {
     od_clr_scr();
     draw_title(1, 16);
@@ -277,6 +288,7 @@ void start_game() {
     draw_dice_outline(12, 101, WHITE);
     draw_sys_msg_board(19, 77);
     draw_cmd_board(38, 77);
+    draw_time_board(38, 109, WHITE);
 
     // initialize
     line_num = 0;
@@ -412,6 +424,15 @@ void xchg_data(FILE *fp, int sockfd) {
                         sprintf(msg, RED "It's your turn!\n");
                         put_sys_msg(msg);
                         print_turn_flag = 1;
+                        sprintf(msg, RED "Press [S] to start your turn!\n");
+                        put_sys_msg(msg);
+                        while (1) {
+                            key = getch();
+                            if (key == 'S' || key == 's') {
+                                Writen(sockfd, "start\n", 7);
+                                break;
+                            }
+                        }
                     }
                     sprintf(msg, RED "PLAYER %d (YOU) rolled: %c %c %c %c %c\n", curr_turn + 1, dice_value[0], dice_value[1], dice_value[2], dice_value[3], dice_value[4]);
                     put_sys_msg(msg);
@@ -450,7 +471,39 @@ void xchg_data(FILE *fp, int sockfd) {
                     }
                 }
             }
+            else if (recvline[0] == 'l' && recvline[1] == ':') { // time limit
+                int time_left = strtol(recvline + 2, NULL, 10);
+                if (time_left >= 20) {
+                    draw_time_board(38, 109, GREEN);
+                    putxy(42, 115, recvline + 2, GREEN);
+                }
+                else if (time_left < 20 && time_left >= 10) {
+                    draw_time_board(38, 109, YELLOW);
+                    putxy(42, 115, recvline + 2, YELLOW);
+                }
+                else if (time_left < 10) {
+                    char *tmp_time;
+                    sprintf(tmp_time, "0%s", recvline + 2);
+                    draw_time_board(38, 109, RED);
+                    putxy(42, 115, tmp_time, RED);
+                }
+                move_selector(0);
+
+                if (time_left == 0) {
+                    if (selector_pos > 9) selector_pos--;
+                    sprintf(sendline, "d:%d\n", selector_pos);
+                    Writen(sockfd, sendline, strlen(sendline));
+                    cmd_flag = 0;
+                    od_set_cursor(47, 1);
+                }
+            }
+            // else if (recvline[0] == 'c' && recvline[1] == ':') { // dice status
+            //     for (int i = 0; i < 5; i++) {
+            //         draw_dice_content(i + 1, dice_value[i] - '0', recvline[i + 2] - '0' ? WHITE : RED);
+            //     }
+            // }
             else {
+                od_set_cursor(47, 1);
                 printf("%s", recvline);
                 fflush(stdout);
             }
@@ -472,6 +525,10 @@ void xchg_data(FILE *fp, int sockfd) {
                 if (change_dice_times < 2) {
                     draw_dice_content(key - '0', dice_value[key - '0' - 1] - '0', dice_chosen[key - '0' - 1] ? WHITE : RED);
                     dice_chosen[key - '0' - 1] = dice_chosen[key - '0' - 1] ? 0 : 1;
+
+                    snprintf(sendline, 20, "c:%d%d%d%d%d\n", dice_chosen[0], dice_chosen[1], dice_chosen[2], dice_chosen[3], dice_chosen[4]);
+                    Writen(sockfd, sendline, strlen(sendline));
+                
                 }
                 else if (change_dice_times == 2) {
                     sprintf(msg, RED "You have changed twice!\n");
