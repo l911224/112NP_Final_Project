@@ -2,14 +2,17 @@
 #include <termios.h>
 #include <time.h>
 
-#define RED     "\x1b[;31;1m"
-#define GREEN   "\x1b[;32;1m"
-#define YELLOW  "\x1b[;33;1m"
-#define BLUE    "\x1b[;34;1m"
-#define PURPLE  "\x1b[;35;1m"
-#define CYAN    "\x1b[;36;1m"
-#define WHITE   "\x1b[;37;1m"
-#define SHINING "\x1b[;32;1m\x1b[6m"
+#define RED       "\x1b[;31;1m"
+#define GREEN     "\x1b[;32;1m"
+#define YELLOW    "\x1b[;33;1m"
+#define BLUE      "\x1b[;34;1m"
+#define PURPLE    "\x1b[;35;1m"
+#define CYAN      "\x1b[;36;1m"
+#define WHITE     "\x1b[;37;1m"
+#define SHINING   "\x1b[;32;1m\x1b[6m"
+#define HIDECUR   "\x1b[?25l"
+#define SHOWCUR   "\x1b[?25h"
+#define CLEARLINE "\x1b[K"
 
 int line_num = 0, slide_ptr = 0, curr_turn = -1, player_num, selector_pos = 0;
 char sys_msg[15][44], dice_value[5], roll_dices[5], score_table[4][MAXLINE], choosing_table[MAXLINE];
@@ -373,7 +376,7 @@ void xchg_data(FILE *fp, int sockfd) {
     int maxfdp1;
     char sendline[MAXLINE], recvline[MAXLINE], msg[MAXLINE];
     int key, dice_chosen[5] = {0}, change_dice_times = 0;
-    int login_flag = 1, cmd_flag = 0, restart_flag = 0, print_turn_flag = 0;
+    int login_flag = 1, cmd_flag = 0, restart_flag = 0, print_turn_flag = 0, welcome_flag = 0, waiting_room_flag = 0;
 
     fd_set rset;
     FD_ZERO(&rset);
@@ -396,6 +399,7 @@ void xchg_data(FILE *fp, int sockfd) {
                     start_game();
                     sscanf(recvline + 2, "Game start!\nn:%d\n\n", &player_num);
                     login_flag = 0;
+                    waiting_room_flag = 0;
                 }
 
                 strcpy(msg, recvline + 2);
@@ -502,8 +506,50 @@ void xchg_data(FILE *fp, int sockfd) {
             //         draw_dice_content(i + 1, dice_value[i] - '0', recvline[i + 2] - '0' ? WHITE : RED);
             //     }
             // }
+            else if (strstr(recvline, "Welcome") != NULL) {
+                for (int i = 1; i <= 17; i++) {
+                    od_clr_scr();
+                    draw_title(i, 16);
+                    usleep(60000);
+                }
+                welcome_flag = 1;
+            }
+            else if (strstr(recvline, "Login account") != NULL) { // login page
+                draw_title(17, 16);
+                putxy(22, 32, "[1] Sign up\n", WHITE);
+                putxy(25, 32, "[2] Log in\n", WHITE);
+                printf(HIDECUR);
+                fflush(stdout);
+
+                while (1){
+                    key = getch();
+                    if (key == '1'){
+                        Writen(sockfd, "1\n", 3);
+                        break;
+                    }
+                    else if (key == '2') {
+                        Writen(sockfd, "2\n", 3);
+                        break;
+                    }
+                }
+            }
+            else if (strstr(recvline, "In the waiting room, ") != NULL) { // waiting room
+                for (int i = 1; i < 26; i++) putxy(i, 1, CLEARLINE, WHITE);    
+                draw_title(1, 1);
+                putxy(5, 1, "IN THE WAITING ROOM\n", WHITE);
+                putxy(7, 1, "Enter [1] to start a game\n", WHITE);
+                putxy(9, 1, "Enter [2] to show your game history\n", WHITE);
+                putxy(11, 1, "Enter [3] to show players in the room\n", WHITE);
+                putxy(13, 1, "Enter [4] to exit\n", WHITE);
+                od_set_cursor(47, 1);
+                printf(SHOWCUR);
+                fflush(stdout);
+                waiting_room_flag = 1;
+                welcome_flag = 0;
+            }
             else {
                 od_set_cursor(47, 1);
+                printf(CLEARLINE);
                 printf("%s", recvline);
                 fflush(stdout);
             }
@@ -512,6 +558,27 @@ void xchg_data(FILE *fp, int sockfd) {
         if (FD_ISSET(fileno(fp), &rset) && login_flag) {
             if (Fgets(sendline, MAXLINE, fp) == NULL) return;
             Writen(sockfd, sendline, strlen(sendline));
+
+            if (welcome_flag) {
+                for (int i = 1; i < 26; i++) putxy(i, 1, CLEARLINE, WHITE);  
+                draw_title(17, 16);
+                putxy(22, 32, "[1] Sign up\n", WHITE);
+                putxy(25, 32, "[2] Log in\n", WHITE);
+            }
+
+            if (waiting_room_flag) {
+                int x = 0;
+                if (!strcmp(sendline, "1\n") || !strcmp(sendline, "3\n") || !strcmp(sendline, "4\n")) x = 2;
+                else if (!strcmp(sendline, "2\n")) x = 6;
+                for (int i = 1; i < 14; i++) putxy(i, 1, CLEARLINE, WHITE);  
+                draw_title(1 + x, 1);
+                putxy(5 + x, 1, "IN THE WAITING ROOM\n", WHITE);
+                putxy(7 + x, 1, "Enter [1] to start a game\n", WHITE);
+                putxy(9 + x, 1, "Enter [2] to show your game history\n", WHITE);
+                putxy(11 + x, 1, "Enter [3] to show players in the room\n", WHITE);
+                putxy(13 + x, 1, "Enter [4] to exit\n", WHITE);
+                od_set_cursor(47, 1);
+            }
         }
 
         if (cmd_flag && curr_turn == player_num) {
@@ -526,9 +593,8 @@ void xchg_data(FILE *fp, int sockfd) {
                     draw_dice_content(key - '0', dice_value[key - '0' - 1] - '0', dice_chosen[key - '0' - 1] ? WHITE : RED);
                     dice_chosen[key - '0' - 1] = dice_chosen[key - '0' - 1] ? 0 : 1;
 
-                    snprintf(sendline, 20, "c:%d%d%d%d%d\n", dice_chosen[0], dice_chosen[1], dice_chosen[2], dice_chosen[3], dice_chosen[4]);
-                    Writen(sockfd, sendline, strlen(sendline));
-                
+                    // snprintf(sendline, 20, "c:%d%d%d%d%d\n", dice_chosen[0], dice_chosen[1], dice_chosen[2], dice_chosen[3], dice_chosen[4]);
+                    // Writen(sockfd, sendline, strlen(sendline));
                 }
                 else if (change_dice_times == 2) {
                     sprintf(msg, RED "You have changed twice!\n");
@@ -644,9 +710,10 @@ void xchg_data(FILE *fp, int sockfd) {
                 break;
             }
         }
+
+       
     } 
 }
-
 
 int main(int argc, char **argv) {
     int sockfd;
