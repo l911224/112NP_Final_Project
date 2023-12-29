@@ -450,6 +450,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                             if(sockfd[j] == 0 || i == j) continue;
                             Writen(sockfd[j], recvline, sockfd[j]);
                         }
+                        printf("recv c :%s",recvline);
                         break;
                     }
                     else if(!strcmp(recvline, "start\n")){  // start timer
@@ -473,7 +474,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
             memset(sendline, 0, sizeof(sendline));
             stepCount++;
             // Check game status
-            if (stepCount == 4 * 1) {  // End game check, modify here to shorten the process normal size = 4 * 13
+            if (stepCount == 4 * 3) {  // End game check, modify here to shorten the process normal size = 4 * 13
                 // Find max score
 
                 // For test only!!!
@@ -987,6 +988,7 @@ void *timer(void *argv){
     struct thread_sockfd_data *data = (struct thread_sockfd_data *) argv;
     int sec = 30;
     char sendline[MAXLINE];
+    memset(sendline, 0, sizeof(char) * MAXLINE);
     time_t cur_time = 0;
     time_t pre_time = 0;
     
@@ -1009,6 +1011,7 @@ void *timer(void *argv){
                 if(data->sockfd[i] == 0) continue;
                 Writen(data->sockfd[i], sendline, MAXLINE);
             }
+            printf("timer : %s", sendline);
         }
     }
     EXIT:
