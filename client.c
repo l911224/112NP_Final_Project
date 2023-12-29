@@ -502,11 +502,6 @@ void xchg_data(FILE *fp, int sockfd) {
                 }
                 continue;
             }
-            // else if (recvline[0] == 'c' && recvline[1] == ':') { // dice status
-            //     for (int i = 0; i < 5; i++) {
-            //         draw_dice_content(i + 1, dice_value[i] - '0', recvline[i + 2] - '0' ? WHITE : RED);
-            //     }
-            // }
             else if (strstr(recvline, "Welcome") != NULL) {
                 for (int i = 1; i <= 17; i++) {
                     od_clr_scr();
@@ -516,6 +511,7 @@ void xchg_data(FILE *fp, int sockfd) {
                 welcome_flag = 1;
             }
             else if (strstr(recvline, "Login account") != NULL) { // login page
+                for (int i = 1; i < 26; i++) putxy(i, 1, CLEARLINE, WHITE);  
                 draw_title(17, 16);
                 putxy(22, 32, "[1] Sign up\n", WHITE);
                 putxy(25, 32, "[2] Log in\n", WHITE);
@@ -594,9 +590,6 @@ void xchg_data(FILE *fp, int sockfd) {
                 if (change_dice_times < 2) {
                     draw_dice_content(key - '0', dice_value[key - '0' - 1] - '0', dice_chosen[key - '0' - 1] ? WHITE : RED);
                     dice_chosen[key - '0' - 1] = dice_chosen[key - '0' - 1] ? 0 : 1;
-
-                    // snprintf(sendline, 20, "c:%d%d%d%d%d\n", dice_chosen[0], dice_chosen[1], dice_chosen[2], dice_chosen[3], dice_chosen[4]);
-                    // Writen(sockfd, sendline, strlen(sendline));
                 }
                 else if (change_dice_times == 2) {
                     sprintf(msg, RED "You have changed twice!\n");
@@ -712,8 +705,6 @@ void xchg_data(FILE *fp, int sockfd) {
                 break;
             }
         }
-
-       
     } 
 }
 
