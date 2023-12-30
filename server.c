@@ -445,14 +445,6 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                             break;
                         }
                     }
-                    else if(recvline[0] == 'c' && recvline[1] == ':'){  // send dice status
-                        for(int j = 0; j < 4; j++){
-                            if(sockfd[j] == 0 || i == j) continue;
-                            Writen(sockfd[j], recvline, sockfd[j]);
-                        }
-                        printf("recv c :%s",recvline);
-                        break;
-                    }
                     else if(!strcmp(recvline, "start\n")){  // start timer
                         struct thread_sockfd_data data;
                         data.flag = &timerFlag;
@@ -474,7 +466,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
             memset(sendline, 0, sizeof(sendline));
             stepCount++;
             // Check game status
-            if (stepCount == 4 * 3) {  // End game check, modify here to shorten the process normal size = 4 * 13
+            if (stepCount == 4 * 2) {  // End game check, modify here to shorten the process normal size = 4 * 13
                 // Find max score
 
                 // For test only!!!
@@ -1011,7 +1003,6 @@ void *timer(void *argv){
                 if(data->sockfd[i] == 0) continue;
                 Writen(data->sockfd[i], sendline, MAXLINE);
             }
-            printf("timer : %s", sendline);
         }
     }
     EXIT:
