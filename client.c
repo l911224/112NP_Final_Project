@@ -14,7 +14,7 @@
 #define SHOWCUR   "\x1b[?25h"
 #define CLEARLINE "\x1b[K"
 
-int line_num = 0, slide_ptr = 0, curr_turn = -1, player_num, selector_pos = 0;
+int line_num = 0, curr_turn = -1, player_num, selector_pos = 0;
 char sys_msg[15][44], dice_value[5], roll_dices[5], score_table[4][MAXLINE], choosing_table[MAXLINE];
 struct timeval timeout = {0, 1000};
 
@@ -295,7 +295,6 @@ void start_game() {
 
     // initialize
     line_num = 0;
-    slide_ptr = 0;
     curr_turn = -1;
     memset(sys_msg, 0, sizeof(sys_msg));
     memset(roll_dices, '1', sizeof(roll_dices));
@@ -422,21 +421,12 @@ void xchg_data(FILE *fp, int sockfd) {
                 char tmp_table[MAXLINE];
                 sscanf(recvline + 2, "%d\nv:%s\ns:%s\n", &curr_turn, dice_value, choosing_table);
                 strcpy(tmp_table, choosing_table);
-                for (int i = 0; i < 5; i++) draw_dice_content(i + 1, dice_value[i] - '0', WHITE);
                 if (curr_turn == player_num) {
                     if (!print_turn_flag) {
                         sprintf(msg, RED "It's your turn!\n");
                         put_sys_msg(msg);
                         print_turn_flag = 1;
-                        sprintf(msg, RED "Press [S] to start your turn!\n");
-                        put_sys_msg(msg);
-                        while (1) {
-                            key = getch();
-                            if (key == 'S' || key == 's') {
-                                Writen(sockfd, "start\n", 7);
-                                break;
-                            }
-                        }
+                        Writen(sockfd, "start\n", 7);
                     }
                     sprintf(msg, RED "PLAYER %d (YOU) rolled: %c %c %c %c %c\n", curr_turn + 1, dice_value[0], dice_value[1], dice_value[2], dice_value[3], dice_value[4]);
                     put_sys_msg(msg);
@@ -446,6 +436,7 @@ void xchg_data(FILE *fp, int sockfd) {
                     put_sys_msg(msg);
                     print_turn_flag = 0;
                 }
+                for (int i = 0; i < 5; i++) draw_dice_content(i + 1, dice_value[i] - '0', WHITE);
                 print_score_data(curr_turn, tmp_table, SHINING);
                 cmd_flag = 1;
                 
@@ -492,7 +483,7 @@ void xchg_data(FILE *fp, int sockfd) {
                 }
                 move_selector(0);
 
-                if (time_left == 0) {
+                if (time_left == 0 && curr_turn == player_num) {
                     if (selector_pos > 9) selector_pos--;
                     sprintf(sendline, "d:%d\n", selector_pos);
                     Writen(sockfd, sendline, strlen(sendline));
