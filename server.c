@@ -309,7 +309,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         logout(userID[i]);  // logout
                         sockfd[i] = 0;      // Reset sockfd and id
                         memset(userID[i], 0, sizeof(userID[i]));
-                        break;
+                        continue;
                     } else if (!strcmp(recvline, "1\n")) {  // Add player to waiting room
                         printf("Player %d wants to play one more game\n", i + 1);
                         *addSockfd = sockfd[i];
@@ -323,7 +323,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         break;
                     } else {
                         Writen(sockfd[i], "m:Illegal operation. Please try again.\n\n", MAXLINE);
-                        break;
+                        continue;
                     }
                 } else {
                     if (Read(sockfd[i], recvline, MAXLINE) == 0 || recvline[0] == 'Q') {  // Deal with ctrl + c and 'Q'
@@ -339,7 +339,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         logout(userID[i]);  // logout
                         sockfd[i] = 0;      // Reset sockfd and id
                         memset(userID[i], 0, sizeof(userID[i]));
-                        break;
+                        continue;
                     } else if (recvline[0] == 'r' && recvline[1] == ':') {  // r:01101 means to roll NO.2 3 5 dices
                         // Check player legal or not
                         if (i != turn) {
@@ -370,7 +370,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                             if (sockfd[j] == 0) continue;
                             Writen(sockfd[j], sendline, MAXLINE);
                         }
-                        break;
+                        continue;
                     } else if (recvline[0] == 'd' && recvline[1] == ':') {  // d:10 fill the 10th table
                         // Check player legal or not
                         if (i != turn) {
@@ -386,6 +386,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         if (totalScoreTable[turn][toFill] != -1 || toFill == 6 || toFill == 7 || toFill == 8 || toFill == 16 || toFill == 17 || toFill == 18) {  // Illegal operation
                             //Writen(sockfd[i], "w:Illegal operation.\n\n", MAXLINE);
                         } else {  // Fill the totalScoreTable
+                            printf("%s",recvline);
                             timerFlag = 1;
                             totalScoreTable[turn][toFill] = scoreTable[toFill];
                             oneTurnDoneFlag = 1;
@@ -442,7 +443,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                                 Writen(sockfd[j], sendScore, MAXLINE);
                             }
                             printf("total score table sent\n");
-                            break;
+                            continue;
                         }
                     }
                     else if(!strcmp(recvline, "start\n")){  // start timer
@@ -453,7 +454,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         }
                         pthread_t t;
                         pthread_create(&t, NULL, timer, (void*) &data);
-                        break;
+                        continue;
                     }
                 }
             }
@@ -466,7 +467,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
             memset(sendline, 0, sizeof(sendline));
             stepCount++;
             // Check game status
-            if (stepCount == 4 * 2) {  // End game check, modify here to shorten the process normal size = 4 * 13
+            if (stepCount == 4 * 13) {  // End game check, modify here to shorten the process normal size = 4 * 13
                 // Find max score
 
                 // For test only!!!
@@ -515,7 +516,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
 
             turn++;
             if (turn == 4) turn = 0;
-
+            printf("p%d turn\n", turn+1);
             if (sockfd[turn] == 0) goto NEXTTURN;  // No player, go to next turn
 
             oneTurnDoneFlag = 0;
@@ -534,7 +535,6 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
             }
             sendScore[strlen(sendScore) - 1] = 0;
             sprintf(sendline, "t:%d\nv:%s\ns:%s\n", turn, diceValue, sendScore);
-            printf("sendScore success\n");
             for (int i = 0; i < 4; i++) {
                 if (sockfd[i] == 0) continue;
                 Writen(sockfd[i], sendline, MAXLINE);
@@ -812,7 +812,6 @@ void dice(char diceToRoll[6], char *diceValue) {
         *(diceValue + i) = v + '0';
     }
     *(diceValue + 5) = '\0';
-    printf("rolled successfully\n");
 }
 
 void sigchld_handler(int signo) {
