@@ -52,8 +52,8 @@ int getch() {
     FD_ZERO(&set);
     FD_SET(STDIN_FILENO, &set);
 
-    timeout.tv_sec = 1;
-    timeout.tv_usec = 0;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 1000;
 
     if (select(STDIN_FILENO + 1, &set, NULL, NULL, &timeout) > 0) {
         ch = getchar();
@@ -442,10 +442,7 @@ void xchg_data(FILE *fp, int sockfd) {
                 print_score_data(curr_turn, tmp_table, SHINING);
                 cmd_flag = 1;
                 
-                if (curr_turn == player_num) {
-                    move_selector(0);
-                    selector_pos = -1;
-                }
+                if (curr_turn == player_num) move_selector(0);
                 else change_dice_times = 0;
             }
             else if (recvline[0] == 'a' && recvline[1] == ':') { // all table
