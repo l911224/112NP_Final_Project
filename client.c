@@ -52,8 +52,8 @@ int getch() {
     FD_ZERO(&set);
     FD_SET(STDIN_FILENO, &set);
 
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 1000;
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
 
     if (select(STDIN_FILENO + 1, &set, NULL, NULL, &timeout) > 0) {
         ch = getchar();
@@ -330,38 +330,40 @@ void print_score_data(int turn, char *score, char *color) {
 }
 
 void move_selector(int dir) {
-    char table_data[20][4];
-    int pos = 0, init_pos = -1, last_pos = -1;
-    char token[4];
-    strcpy(table_data[9], "-1");
+    if (dir != 0) {
+        char table_data[20][4];
+        int pos = 0, init_pos = -1, last_pos = -1;
+        char token[4];
+        strcpy(table_data[9], "-1");
 
-    const char* p = choosing_table;
-    while (sscanf(p, "%3[^,],", token) == 1) {
-        if (pos == 9) pos++;
-        strncpy(table_data[pos], token, 4);
-        if (strcmp(table_data[pos], "-1") != 0) {
-            if (init_pos == -1) init_pos = pos;
-            last_pos = pos;
+        const char* p = choosing_table;
+        while (sscanf(p, "%3[^,],", token) == 1) {
+            if (pos == 9) pos++;
+            strncpy(table_data[pos], token, 4);
+            if (strcmp(table_data[pos], "-1") != 0) {
+                if (init_pos == -1) init_pos = pos;
+                last_pos = pos;
+            }
+            pos++;
+            p = strchr(p, ',');
+            if (!p) break;
+            p++;
         }
-        pos++;
-        p = strchr(p, ',');
-        if (!p) break;
-        p++;
-    }
 
-    if (selector_pos == -1) 
-        selector_pos = init_pos; 
-    else {
-        while (1) {
-            selector_pos += dir;
-            if (selector_pos < init_pos) {
-                selector_pos = init_pos;
-                break;
-            } else if (selector_pos > last_pos) {
-                selector_pos = last_pos;
-                break;
-            } else if (strcmp(table_data[selector_pos], "-1") != 0) {
-                break; 
+        if (selector_pos == -1) 
+            selector_pos = init_pos; 
+        else {
+            while (1) {
+                selector_pos += dir;
+                if (selector_pos < init_pos) {
+                    selector_pos = init_pos;
+                    break;
+                } else if (selector_pos > last_pos) {
+                    selector_pos = last_pos;
+                    break;
+                } else if (strcmp(table_data[selector_pos], "-1") != 0) {
+                    break; 
+                }
             }
         }
     }
