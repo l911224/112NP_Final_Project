@@ -330,40 +330,38 @@ void print_score_data(int turn, char *score, char *color) {
 }
 
 void move_selector(int dir) {
-    if (dir != 0) {
-        char table_data[20][4];
-        int pos = 0, init_pos = -1, last_pos = -1;
-        char token[4];
-        strcpy(table_data[9], "-1");
+    char table_data[20][4];
+    int pos = 0, init_pos = -1, last_pos = -1;
+    char token[4];
+    strcpy(table_data[9], "-1");
 
-        const char* p = choosing_table;
-        while (sscanf(p, "%3[^,],", token) == 1) {
-            if (pos == 9) pos++;
-            strncpy(table_data[pos], token, 4);
-            if (strcmp(table_data[pos], "-1") != 0) {
-                if (init_pos == -1) init_pos = pos;
-                last_pos = pos;
-            }
-            pos++;
-            p = strchr(p, ',');
-            if (!p) break;
-            p++;
+    const char* p = choosing_table;
+    while (sscanf(p, "%3[^,],", token) == 1) {
+        if (pos == 9) pos++;
+        strncpy(table_data[pos], token, 4);
+        if (strcmp(table_data[pos], "-1") != 0) {
+            if (init_pos == -1) init_pos = pos;
+            last_pos = pos;
         }
+        pos++;
+        p = strchr(p, ',');
+        if (!p) break;
+        p++;
+    }
 
-        if (selector_pos == -1) 
-            selector_pos = init_pos; 
-        else {
-            while (1) {
-                selector_pos += dir;
-                if (selector_pos < init_pos) {
-                    selector_pos = init_pos;
-                    break;
-                } else if (selector_pos > last_pos) {
-                    selector_pos = last_pos;
-                    break;
-                } else if (strcmp(table_data[selector_pos], "-1") != 0) {
-                    break; 
-                }
+    if (selector_pos == -1) 
+        selector_pos = init_pos; 
+    else {
+        while (dir != 0) {
+            selector_pos += dir;
+            if (selector_pos < init_pos) {
+                selector_pos = init_pos;
+                break;
+            } else if (selector_pos > last_pos) {
+                selector_pos = last_pos;
+                break;
+            } else if (strcmp(table_data[selector_pos], "-1") != 0) {
+                break; 
             }
         }
     }
@@ -442,7 +440,10 @@ void xchg_data(FILE *fp, int sockfd) {
                 print_score_data(curr_turn, tmp_table, SHINING);
                 cmd_flag = 1;
                 
-                if (curr_turn == player_num) move_selector(0);
+                if (curr_turn == player_num) {
+                    selector_pos = -1;
+                    move_selector(0);
+                }
                 else change_dice_times = 0;
             }
             else if (recvline[0] == 'a' && recvline[1] == ':') { // all table
