@@ -356,6 +356,10 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         dice(diceToRoll, diceValue);
                         printf("Rolled : %s\n", diceValue);
                         countScore(diceValue, scoreTable);
+                        // Yahtzee bonus
+                        if (scoreTable[14] == 50 && totalScoreTable[turn][14] != -1) {
+                            totalScoreTable[turn][16] += 100;
+                        }
                         char sendScore[MAXLINE] = {0};
                         for (int j = 0; j < 19; j++) {  // sendScore like : 1,2,3,4,5,6,7,8,-1,-1,0,0,-1,-1,0,0,12,13,-1
                             char tmp[30];
@@ -391,10 +395,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                             totalScoreTable[turn][toFill] = scoreTable[toFill];
                             oneTurnDoneFlag = 1;
                             // Check players totalScoreTable bonus
-                            // Yahtzee bonus
-                            if (scoreTable[14] == 50 && totalScoreTable[turn][14] != -1) {
-                                totalScoreTable[turn][16] += 100;
-                            }
+            
                             // Upper section
                             int flag = 1, sum = 0;
                             for (int j = 0; j < 6; j++) {
@@ -445,6 +446,13 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                             printf("total score table sent\n");
                             continue;
                         }
+                    }
+                    else if(recvline[0] == 'c' && recvline[1] == ':'){
+                        for(int j = 0; j < 4; j++){
+                            if(sockfd[j] == 0 || i == j) continue;
+                            Writen(sockfd[j], recvline, MAXLINE);
+                        }
+                        continue;
                     }
                 }
             }
@@ -515,6 +523,10 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
             dice("11111", diceValue);
             printf("Rolled : %s\n", diceValue);
             countScore(diceValue, scoreTable);
+            // Yahtzee bonus
+            if (scoreTable[14] == 50 && totalScoreTable[turn][14] != -1) {
+                totalScoreTable[turn][16] += 100;
+            }
             char sendScore[MAXLINE] = {0};
             for (int i = 0; i < 19; i++) {  // sendScore like : 1,2,3,4,5,6,7,8,-1,-1,0,0,-1,-1,0,0,12,13,-1
                 char tmp[30];
