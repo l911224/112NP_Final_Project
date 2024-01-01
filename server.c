@@ -446,16 +446,6 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                             continue;
                         }
                     }
-                    else if(!strcmp(recvline, "start\n")){  // start timer
-                        struct thread_sockfd_data data;
-                        data.flag = &timerFlag;
-                        for(int j = 0; j < 4; j++){
-                            data.sockfd[j] = sockfd[j];
-                        }
-                        pthread_t t;
-                        pthread_create(&t, NULL, timer, (void*) &data);
-                        continue;
-                    }
                 }
             }
         }
@@ -518,7 +508,13 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
             if (turn == 4) turn = 0;
             printf("p%d turn\n", turn+1);
             if (sockfd[turn] == 0) goto NEXTTURN;  // No player, go to next turn
-
+            struct thread_sockfd_data data;
+            data.flag = &timerFlag;
+            for(int j = 0; j < 4; j++){
+                data.sockfd[j] = sockfd[j];
+            }
+            pthread_t t;
+            pthread_create(&t, NULL, timer, (void*) &data);
             oneTurnDoneFlag = 0;
             memset(diceValue, 0, sizeof(diceValue));
             memset(diceToRoll, 0, sizeof(diceToRoll));
