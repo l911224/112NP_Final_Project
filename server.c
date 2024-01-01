@@ -18,7 +18,7 @@ char waitingRoomUserID[4][MAXLINE];
 int startGame = 0;
 struct timeval timeout = {0, 10};
 struct thread_sockfd_data{
-    int sockfd[4];
+    int *sockfd[4];
     int *flag;
 };
 
@@ -386,7 +386,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         if (totalScoreTable[turn][toFill] != -1 || toFill == 6 || toFill == 7 || toFill == 8 || toFill == 16 || toFill == 17 || toFill == 18) {  // Illegal operation
                             //Writen(sockfd[i], "w:Illegal operation.\n\n", MAXLINE);
                         } else {  // Fill the totalScoreTable
-                            printf("%s",recvline);
+                            printf("%sFrom player %d\n",recvline, i+1);
                             timerFlag = 1;
                             totalScoreTable[turn][toFill] = scoreTable[toFill];
                             oneTurnDoneFlag = 1;
@@ -508,13 +508,6 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
             if (turn == 4) turn = 0;
             printf("p%d turn\n", turn+1);
             if (sockfd[turn] == 0) goto NEXTTURN;  // No player, go to next turn
-            struct thread_sockfd_data data;
-            data.flag = &timerFlag;
-            for(int j = 0; j < 4; j++){
-                data.sockfd[j] = sockfd[j];
-            }
-            pthread_t t;
-            pthread_create(&t, NULL, timer, (void*) &data);
             oneTurnDoneFlag = 0;
             memset(diceValue, 0, sizeof(diceValue));
             memset(diceToRoll, 0, sizeof(diceToRoll));
@@ -535,7 +528,14 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                 if (sockfd[i] == 0) continue;
                 Writen(sockfd[i], sendline, MAXLINE);
             }
-            timerFlag = 0; // temperary , need start sign
+            struct thread_sockfd_data data;
+            data.flag = &timerFlag;
+            timerFlag = 0;
+            for(int j = 0; j < 4; j++){
+                data.sockfd[j] = &sockfd[j];
+            }
+            pthread_t t;
+            pthread_create(&t, NULL, timer, (void*) &data);
         }
     }
 
@@ -983,8 +983,8 @@ void *timer(void *argv){
     pre_time = cur_time;
     sprintf(sendline, "l:%d\n", sec);
     for(int i = 0; i < 4; i++){
-        if(data->sockfd[i] == 0) continue;
-        Writen(data->sockfd[i], sendline, MAXLINE);
+        if(*data->sockfd[i] == 0) continue;
+        Writen(*data->sockfd[i], sendline, MAXLINE);
     }
 
     while(sec > 0){
@@ -995,12 +995,14 @@ void *timer(void *argv){
             sec--;
             sprintf(sendline, "l:%d\n", sec);
             for(int i = 0; i < 4; i++){
-                if(data->sockfd[i] == 0) continue;
-                Writen(data->sockfd[i], sendline, MAXLINE);
+                if(*data->sockfd[i] == 0) continue;
+                Writen(*data->sockfd[i], sendline, MAXLINE);
             }
+            printf("%s", sendline);
         }
     }
     EXIT:
     pthread_detach(pthread_self());
+    printf("Timer stopped!\n");
     return;
 }
