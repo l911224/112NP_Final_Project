@@ -296,6 +296,7 @@ void start_game() {
     // initialize
     line_num = 0;
     curr_turn = -1;
+    selector_pos = 0;
     memset(sys_msg, 0, sizeof(sys_msg));
     memset(roll_dices, '1', sizeof(roll_dices));
     memset(score_table, 0, sizeof(score_table));
@@ -399,6 +400,7 @@ void xchg_data(FILE *fp, int sockfd) {
                     sscanf(recvline + 2, "Game start!\nn:%d\n\n", &player_num);
                     login_flag = 0;
                     waiting_room_flag = 0;
+                    change_dice_times = 0;
                 }
 
                 strcpy(msg, recvline + 2);
