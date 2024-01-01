@@ -412,7 +412,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                             }
                             // Lower section
                             flag = 1, sum = 0;
-                            for (int j = 9; j < 16; j++) {
+                            for (int j = 9; j < 17; j++) {
                                 if (totalScoreTable[turn][j] == -1) {
                                     flag = 0;
                                     break;
