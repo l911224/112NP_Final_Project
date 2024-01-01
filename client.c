@@ -367,7 +367,10 @@ void move_selector(int dir) {
         }
     }
 
-    od_set_cursor(7 + 2 * selector_pos, 36 + 11 * curr_turn);
+    if (curr_turn == player_num)
+        od_set_cursor(7 + 2 * selector_pos, 36 + 11 * curr_turn);
+    else
+        od_set_cursor(47, 1);
 }
 
 
@@ -446,7 +449,10 @@ void xchg_data(FILE *fp, int sockfd) {
                     selector_pos = -1;
                     move_selector(0);
                 }
-                else change_dice_times = 0;
+                else {
+                    change_dice_times = 0;
+                    memset(dice_chosen, 0, sizeof(dice_chosen));
+                }
             }
             else if (recvline[0] == 'a' && recvline[1] == ':') { // all table
                 int pos = 0, lineStart = 2;
@@ -496,11 +502,15 @@ void xchg_data(FILE *fp, int sockfd) {
                     od_set_cursor(47, 1);
                 }
             }
+            else if (recvline[0] == 'c' && recvline[1] == ':') { // dice chosen status
+                for (int i = 0; i < 5; i++)
+                    draw_dice_content(i + 1, dice_value[i] - '0', recvline[i + 2] - '0' ? RED : WHITE);
+            }
             else if (strstr(recvline, "Welcome") != NULL) {
                 for (int i = 1; i <= 17; i++) {
                     od_clr_scr();
                     draw_title(i, 16);
-                    usleep(60000);
+                    usleep(50000);
                 }
                 welcome_flag = 1;
             }
@@ -581,8 +591,11 @@ void xchg_data(FILE *fp, int sockfd) {
             case '4':
             case '5':
                 if (change_dice_times < 2) {
-                    draw_dice_content(key - '0', dice_value[key - '0' - 1] - '0', dice_chosen[key - '0' - 1] ? WHITE : RED);
                     dice_chosen[key - '0' - 1] = dice_chosen[key - '0' - 1] ? 0 : 1;
+                    draw_dice_content(key - '0', dice_value[key - '0' - 1] - '0', dice_chosen[key - '0' - 1] ? RED : WHITE);
+
+                    sprintf(sendline, "c:%d%d%d%d%d\n", dice_chosen[0], dice_chosen[1], dice_chosen[2], dice_chosen[3], dice_chosen[4]);
+                    Writen(sockfd, sendline, strlen(sendline));
                 }
                 else if (change_dice_times == 2) {
                     sprintf(msg, RED "You have changed twice!\n");
