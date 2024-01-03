@@ -272,7 +272,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
         if(numOfPlayer == 1 && !endGame){
             for(int i = 0; i < 4; i++){
                 if(sockfd[i] == 0) continue;
-                Writen(sockfd[i], "m:You are the last player.\n\nSo you are the winner.\n\n[1] Play one more game. [2] Exit game.\n\n", MAXLINE);
+                Writen(sockfd[i], "m:You are the last player.\n\nSo you are the winner.\n\n[1] Play one more game  [2] Exit game\n\n", MAXLINE);
                 endGame = 1;
                 updateHistory(userID[i], gameType, 1);
                 break;
