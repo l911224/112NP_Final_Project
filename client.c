@@ -403,7 +403,11 @@ void xchg_data(FILE *fp, int sockfd) {
         memset(msg, 0 ,sizeof(msg));
 
         if (FD_ISSET(sockfd, &rset)) {
-            if (Read(sockfd, recvline, MAXLINE) == 0) return;
+            if (Read(sockfd, recvline, MAXLINE) == 0) {
+                set_cursor_bottom();
+                od_disp_str_red("Server has aborted.\n");
+                return;
+            }
 
             if (recvline[0] == 'm' && recvline[1] == ':') { // system msg
                 if (strstr(recvline, "Game start!") != NULL) {
