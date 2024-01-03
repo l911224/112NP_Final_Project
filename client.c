@@ -492,11 +492,11 @@ void xchg_data(FILE *fp, int sockfd) {
                 int time_left = strtol(recvline + 2, NULL, 10);
                 if (time_left >= 20) {
                     draw_time_board(38, 108, GREEN);
-                    putxy(42, 114, recvline + 2, GREEN);
+                    putxy(42, 115, recvline + 2, GREEN);
                 }
                 else if (time_left < 20 && time_left >= 10) {
                     draw_time_board(38, 108, YELLOW);
-                    putxy(42, 114, recvline + 2, YELLOW);
+                    putxy(42, 115, recvline + 2, YELLOW);
                 }
                 else if (time_left < 10) {
                     draw_time_board(38, 108, RED);
