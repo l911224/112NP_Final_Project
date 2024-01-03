@@ -315,8 +315,8 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         *addSockfd = sockfd[i];
                         strcpy(IDBuffer, userID[i]);
                         *connfdFlag = 10;
-                        Writen(sockfd[i], "In the waiting room, you can type to chat with other players.\n\nPress [1] to start a game.\nPress [2] to show your game history.\nPress [3] to show players in waiting room.\nPress [4]"
-                        " to exit the game.\n\n", MAXLINE);
+                        Writen(sockfd[i], "In the waiting room, you can type to chat with other players.\n\nPress [1] to start a game\nPress [2] to show your game history\nPress [3] to show players in waiting room\nPress [4]"
+                        " to exit the games\n\n", MAXLINE);
                         Close(sockfd[i]);
                         sockfd[i] = 0;  // Reset sockfd and id
                         memset(userID[i], 0, sizeof(userID[i]));
