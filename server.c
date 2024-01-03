@@ -572,12 +572,14 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         updateHistory(userID[i], gameType, 0);
                         continue;
                     }
-                    strcat(sendWinner, userID[i]);
+                    char tmp[MAXLINE];
+                    sprintf(tmp, "Player %d(%s)", i + 1, userID[i]);
+                    strcat(sendWinner, tmp);
                     strcat(sendWinner, " ");
                     updateHistory(userID[i], gameType, 1);
                 }
                 strcat(sendWinner, "\n");
-                sprintf(sendline, "%s\n[1] Play one more game. [2] Exit game.\n\n", sendWinner);
+                sprintf(sendline, "%s\n[1] Play one more game  [2] Exit game\n\n", sendWinner);
                 // Broadcast winner
                 for (int i = 0; i < 4; i++) {
                     if (sockfd[i] == 0) continue;
@@ -637,7 +639,10 @@ void *waitingRoom(void *argv) {
     fd_set rset;
     FD_ZERO(&rset);
     for (;;) {
-        if (numOfMember == 4) goto GAMESTART;
+        if (numOfMember == 4) {
+            sleep(0.5);
+            goto GAMESTART;
+        }
         maxfdp1 = -1;
         FD_ZERO(&rset);
         memset(sendline, 0, sizeof(sendline));
