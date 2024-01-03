@@ -540,11 +540,11 @@ void xchg_data(FILE *fp, int sockfd) {
             else if (strstr(recvline, "In the waiting room, ") != NULL) { // waiting room
                 for (int i = 1; i < 26; i++) putxy(i, 1, CLEARLINE, WHITE);    
                 draw_title(1, 1);
-                putxy(5, 1, "IN THE WAITING ROOM\n", WHITE);
-                putxy(7, 1, "Enter [1] to start a game\n", WHITE);
-                putxy(9, 1, "Enter [2] to show your game history\n", WHITE);
-                putxy(11, 1, "Enter [3] to show players in the room\n", WHITE);
-                putxy(13, 1, "Enter [4] to exit\n", WHITE);
+                putxy(5, 1, "IN THE WAITING ROOM\n", YELLOW);
+                putxy(7, 1, "Enter [1] to start a game\n", YELLOW);
+                putxy(9, 1, "Enter [2] to show your game history\n", YELLOW);
+                putxy(11, 1, "Enter [3] to show players in the room\n", YELLOW);
+                putxy(13, 1, "Enter [4] to exit\n", YELLOW);
                 set_cursor_bottom();
                 printf(SHOWCUR);
                 fflush(stdout);
@@ -556,6 +556,17 @@ void xchg_data(FILE *fp, int sockfd) {
                 printf(CLEARLINE);
                 printf("%s", recvline);
                 fflush(stdout);
+
+                if (waiting_room_flag) {
+                    for (int i = 1; i < 14; i++) putxy(i, 1, CLEARLINE, WHITE);  
+                    draw_title(1, 1);
+                    putxy(5, 1, "IN THE WAITING ROOM\n", YELLOW);
+                    putxy(7, 1, "Enter [1] to start a game\n", YELLOW);
+                    putxy(9, 1, "Enter [2] to show your game history\n", YELLOW);
+                    putxy(11, 1, "Enter [3] to show players in the room\n", YELLOW);
+                    putxy(13, 1, "Enter [4] to exit\n", YELLOW);
+                    set_cursor_bottom();
+                }
             }
         }
 
@@ -570,19 +581,6 @@ void xchg_data(FILE *fp, int sockfd) {
                 putxy(25, 32, "[2] Log in\n", WHITE);
             }
 
-            if (waiting_room_flag) {
-                int x = 0;
-                if (!strcmp(sendline, "1\n") || !strcmp(sendline, "3\n") || !strcmp(sendline, "4\n")) x = 2;
-                else if (!strcmp(sendline, "2\n")) x = 6;
-                for (int i = 1; i < 14; i++) putxy(i, 1, CLEARLINE, WHITE);  
-                draw_title(1 + x, 1);
-                putxy(5 + x, 1, "IN THE WAITING ROOM\n", WHITE);
-                putxy(7 + x, 1, "Enter [1] to start a game\n", WHITE);
-                putxy(9 + x, 1, "Enter [2] to show your game history\n", WHITE);
-                putxy(11 + x, 1, "Enter [3] to show players in the room\n", WHITE);
-                putxy(13 + x, 1, "Enter [4] to exit\n", WHITE);
-                set_cursor_bottom();
-            }
         }
 
         if (cmd_flag && curr_turn == player_num) {
