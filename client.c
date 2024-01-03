@@ -402,8 +402,8 @@ void xchg_data(FILE *fp, int sockfd) {
                     start_game();
                     sscanf(recvline + 2, "Game start!\nn:%d\n\n", &player_num);
                     char player[MAXLINE];
-                    sprintf(player, "PLAYER %d", player_num);
-                    putxy(6, 32, player, RED);
+                    sprintf(player, "PLAYER %d", player_num + 1);
+                    putxy(5, 33 + 4 * player_num, player, RED);
                     login_flag = 0;
                     waiting_room_flag = 0;
                     change_dice_times = 0;
