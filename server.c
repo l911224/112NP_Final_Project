@@ -714,7 +714,7 @@ void *waitingRoom(void *argv) {
 
                 sprintf(sendline, "(%s) %s", waitingRoomUserID[i], recvline);
                 for (int j = 0; j < 4; j++) {
-                    if (waitingRoomConnfd[j] == 0 || i == j) continue;
+                    if (waitingRoomConnfd[j] == 0) continue;
                     Writen(waitingRoomConnfd[j], sendline, MAXLINE);
                 }
             }
