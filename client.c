@@ -67,14 +67,6 @@ int getch() {
     return ch;
 }
 
-void set_cursor_bottom() {
-    struct winsize w;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-
-    int rows = w.ws_row;
-    od_set_cursor(rows, 1);
-}
-
 void putxy(int x, int y, char *str, char *color) {
     od_set_cursor(x, y);
     printf("%s%s" WHITE, color, str);
@@ -126,7 +118,7 @@ void draw_table() {
     od_disp_str_white("　├─────────────┼─────────────┼──────────┼──────────┼──────────┼──────────┤\r\n");
     od_disp_str_white("　│Chance       │     Sum     │          │          │          │          │\r\n");
     od_disp_str_white("　├─────────────┼─────────────┼──────────┼──────────┼──────────┼──────────┤\r\n");
-    od_disp_str_white("　│YAHTZEE BONUS│  (per) +50  │          │          │          │          │\r\n");
+    od_disp_str_white("　│YAHTZEE BONUS│ (each) +100 │          │          │          │          │\r\n");
     od_disp_str_white("　├─────────────┼─────────────┼──────────┼──────────┼──────────┼──────────┤\r\n");
     od_disp_str_white("　│LOWER TOTAL  │  ========>  │          │          │          │          │\r\n");
     od_disp_str_white("　├─────────────┼─────────────┼──────────┼──────────┼──────────┼──────────┤\r\n");
@@ -227,7 +219,7 @@ void draw_dice_content(int num, int val, char *color) {
         break;        
     }
 
-    set_cursor_bottom();
+    od_set_cursor(47, 1);
 }
 
 void draw_sys_msg_board(int x, int y) {
@@ -263,7 +255,7 @@ void put_sys_msg(char *str) {
         putxy(22 + i, 79, "                                           ", YELLOW);
         putxy(22 + i, 79, sys_msg[idx], YELLOW);
     }
-    set_cursor_bottom();
+    od_set_cursor(47, 1);
 }
 
 void draw_cmd_board(int x, int y) {
@@ -335,7 +327,7 @@ void print_score_data(int turn, char *score, char *color) {
         putxy(7 + 2 * pos++, 36 + 11 * turn, formattedData, color);
         data = strtok(NULL, ",");
     }
-    set_cursor_bottom();
+    od_set_cursor(47, 1);
 }
 
 void move_selector(int dir) {
@@ -378,7 +370,7 @@ void move_selector(int dir) {
     if (curr_turn == player_num)
         od_set_cursor(7 + 2 * selector_pos, 36 + 11 * curr_turn);
     else
-        set_cursor_bottom();
+        od_set_cursor(47, 1);
 }
 
 
@@ -540,33 +532,22 @@ void xchg_data(FILE *fp, int sockfd) {
             else if (strstr(recvline, "In the waiting room, ") != NULL) { // waiting room
                 for (int i = 1; i < 26; i++) putxy(i, 1, CLEARLINE, WHITE);    
                 draw_title(1, 1);
-                putxy(5, 1, "IN THE WAITING ROOM\n", YELLOW);
-                putxy(7, 1, "Enter [1] to start a game\n", YELLOW);
-                putxy(9, 1, "Enter [2] to show your game history\n", YELLOW);
-                putxy(11, 1, "Enter [3] to show players in the room\n", YELLOW);
-                putxy(13, 1, "Enter [4] to exit\n", YELLOW);
-                set_cursor_bottom();
+                putxy(5, 1, "IN THE WAITING ROOM\n", WHITE);
+                putxy(7, 1, "Enter [1] to start a game\n", WHITE);
+                putxy(9, 1, "Enter [2] to show your game history\n", WHITE);
+                putxy(11, 1, "Enter [3] to show players in the room\n", WHITE);
+                putxy(13, 1, "Enter [4] to exit\n", WHITE);
+                od_set_cursor(47, 1);
                 printf(SHOWCUR);
                 fflush(stdout);
                 waiting_room_flag = 1;
                 welcome_flag = 0;
             }
             else {
-                set_cursor_bottom();
+                od_set_cursor(47, 1);
                 printf(CLEARLINE);
                 printf("%s", recvline);
                 fflush(stdout);
-
-                if (waiting_room_flag) {
-                    for (int i = 1; i < 14; i++) putxy(i, 1, CLEARLINE, WHITE);  
-                    draw_title(1, 1);
-                    putxy(5, 1, "IN THE WAITING ROOM\n", YELLOW);
-                    putxy(7, 1, "Enter [1] to start a game\n", YELLOW);
-                    putxy(9, 1, "Enter [2] to show your game history\n", YELLOW);
-                    putxy(11, 1, "Enter [3] to show players in the room\n", YELLOW);
-                    putxy(13, 1, "Enter [4] to exit\n", YELLOW);
-                    set_cursor_bottom();
-                }
             }
         }
 
@@ -581,6 +562,19 @@ void xchg_data(FILE *fp, int sockfd) {
                 putxy(25, 32, "[2] Log in\n", WHITE);
             }
 
+            if (waiting_room_flag) {
+                int x = 0;
+                if (!strcmp(sendline, "1\n") || !strcmp(sendline, "3\n") || !strcmp(sendline, "4\n")) x = 2;
+                else if (!strcmp(sendline, "2\n")) x = 6;
+                for (int i = 1; i < 14; i++) putxy(i, 1, CLEARLINE, WHITE);  
+                draw_title(1 + x, 1);
+                putxy(5 + x, 1, "IN THE WAITING ROOM\n", WHITE);
+                putxy(7 + x, 1, "Enter [1] to start a game\n", WHITE);
+                putxy(9 + x, 1, "Enter [2] to show your game history\n", WHITE);
+                putxy(11 + x, 1, "Enter [3] to show players in the room\n", WHITE);
+                putxy(13 + x, 1, "Enter [4] to exit\n", WHITE);
+                od_set_cursor(47, 1);
+            }
         }
 
         if (cmd_flag && curr_turn == player_num) {
@@ -636,7 +630,7 @@ void xchg_data(FILE *fp, int sockfd) {
                 sprintf(sendline, "d:%d\n", selector_pos);
                 Writen(sockfd, sendline, strlen(sendline));
                 cmd_flag = 0;
-                set_cursor_bottom();
+                od_set_cursor(47, 1);
                 break;
             case 'q':
             case 'Q':
@@ -661,7 +655,7 @@ void xchg_data(FILE *fp, int sockfd) {
                             break;
                     }
                 }
-                set_cursor_bottom();
+                od_set_cursor(47, 1);
                 break;
             }
         }
@@ -692,7 +686,7 @@ void xchg_data(FILE *fp, int sockfd) {
                             break;
                     }
                 }
-                set_cursor_bottom();
+                od_set_cursor(47, 1);
                 break;
             }
         }
