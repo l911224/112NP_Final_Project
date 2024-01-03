@@ -227,7 +227,7 @@ void draw_dice_content(int num, int val, char *color) {
         break;        
     }
 
-    od_set_cursor(47, 1);
+    set_cursor_bottom();
 }
 
 void draw_sys_msg_board(int x, int y) {
@@ -263,7 +263,7 @@ void put_sys_msg(char *str) {
         putxy(22 + i, 79, "                                           ", YELLOW);
         putxy(22 + i, 79, sys_msg[idx], YELLOW);
     }
-    od_set_cursor(47, 1);
+    set_cursor_bottom();
 }
 
 void draw_cmd_board(int x, int y) {
@@ -335,7 +335,7 @@ void print_score_data(int turn, char *score, char *color) {
         putxy(7 + 2 * pos++, 36 + 11 * turn, formattedData, color);
         data = strtok(NULL, ",");
     }
-    od_set_cursor(47, 1);
+    set_cursor_bottom();
 }
 
 void move_selector(int dir) {
@@ -378,7 +378,7 @@ void move_selector(int dir) {
     if (curr_turn == player_num)
         od_set_cursor(7 + 2 * selector_pos, 36 + 11 * curr_turn);
     else
-        od_set_cursor(47, 1);
+        set_cursor_bottom();
 }
 
 
@@ -545,14 +545,14 @@ void xchg_data(FILE *fp, int sockfd) {
                 putxy(9, 1, "Enter [2] to show your game history\n", WHITE);
                 putxy(11, 1, "Enter [3] to show players in the room\n", WHITE);
                 putxy(13, 1, "Enter [4] to exit\n", WHITE);
-                od_set_cursor(47, 1);
+                set_cursor_bottom();
                 printf(SHOWCUR);
                 fflush(stdout);
                 waiting_room_flag = 1;
                 welcome_flag = 0;
             }
             else {
-                od_set_cursor(47, 1);
+                set_cursor_bottom();
                 printf(CLEARLINE);
                 printf("%s", recvline);
                 fflush(stdout);
@@ -638,7 +638,7 @@ void xchg_data(FILE *fp, int sockfd) {
                 sprintf(sendline, "d:%d\n", selector_pos);
                 Writen(sockfd, sendline, strlen(sendline));
                 cmd_flag = 0;
-                od_set_cursor(47, 1);
+                set_cursor_bottom();
                 break;
             case 'q':
             case 'Q':
@@ -663,7 +663,7 @@ void xchg_data(FILE *fp, int sockfd) {
                             break;
                     }
                 }
-                od_set_cursor(47, 1);
+                set_cursor_bottom();
                 break;
             }
         }
@@ -694,7 +694,7 @@ void xchg_data(FILE *fp, int sockfd) {
                             break;
                     }
                 }
-                od_set_cursor(47, 1);
+                set_cursor_bottom();
                 break;
             }
         }
