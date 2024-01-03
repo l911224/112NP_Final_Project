@@ -401,6 +401,9 @@ void xchg_data(FILE *fp, int sockfd) {
                 if (strstr(recvline, "Game start!") != NULL) {
                     start_game();
                     sscanf(recvline + 2, "Game start!\nn:%d\n\n", &player_num);
+                    char player[MAXLINE];
+                    sprintf(player, "PLAYER %d", player_num);
+                    putxy(6, 32, player, RED);
                     login_flag = 0;
                     waiting_room_flag = 0;
                     change_dice_times = 0;
@@ -493,14 +496,6 @@ void xchg_data(FILE *fp, int sockfd) {
                     putxy(42, 116, recvline + 2, RED);
                 }
                 move_selector(0);
-
-                // if (time_left == 0 && curr_turn == player_num) {
-                //     if (selector_pos > 9) selector_pos--;
-                //     sprintf(sendline, "d:%d\n", selector_pos);
-                //     Writen(sockfd, sendline, strlen(sendline));
-                //     cmd_flag = 0;
-                //     od_set_cursor(47, 1);
-                // }
             }
             else if (recvline[0] == 'c' && recvline[1] == ':') { // dice chosen status
                 for (int i = 0; i < 5; i++)
