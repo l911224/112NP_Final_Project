@@ -494,13 +494,13 @@ void xchg_data(FILE *fp, int sockfd) {
                 }
                 move_selector(0);
 
-                if (time_left == 0 && curr_turn == player_num) {
-                    if (selector_pos > 9) selector_pos--;
-                    sprintf(sendline, "d:%d\n", selector_pos);
-                    Writen(sockfd, sendline, strlen(sendline));
-                    cmd_flag = 0;
-                    od_set_cursor(47, 1);
-                }
+                // if (time_left == 0 && curr_turn == player_num) {
+                //     if (selector_pos > 9) selector_pos--;
+                //     sprintf(sendline, "d:%d\n", selector_pos);
+                //     Writen(sockfd, sendline, strlen(sendline));
+                //     cmd_flag = 0;
+                //     od_set_cursor(47, 1);
+                // }
             }
             else if (recvline[0] == 'c' && recvline[1] == ':') { // dice chosen status
                 for (int i = 0; i < 5; i++)
