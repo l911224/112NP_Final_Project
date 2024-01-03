@@ -242,10 +242,11 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
     memset(totalScoreTable, -1, sizeof(totalScoreTable));
     memset(scoreTable, -1, sizeof(scoreTable));
     // Initialize yahtzee bonus
-    totalScoreTable[0][16] = 0;
-    totalScoreTable[1][16] = 0;
-    totalScoreTable[2][16] = 0;
-    totalScoreTable[3][16] = 0;
+    for(int i = 0; i < 4; i++){
+        if(sockfd[i] == 0) continue;
+        totalScoreTable[i][16] = 0;
+    }
+
     //Check gameType
     int numOfPlayer = 0;
     for (int i = 0; i < 4; i++) {
