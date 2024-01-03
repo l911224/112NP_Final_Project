@@ -403,7 +403,7 @@ void xchg_data(FILE *fp, int sockfd) {
                     sscanf(recvline + 2, "Game start!\nn:%d\n\n", &player_num);
                     char player[MAXLINE];
                     sprintf(player, "PLAYER %d", player_num + 1);
-                    putxy(5, 33 + 4 * player_num, player, RED);
+                    putxy(5, 33 + 11 * player_num, player, RED);
                     login_flag = 0;
                     waiting_room_flag = 0;
                     change_dice_times = 0;
@@ -546,7 +546,7 @@ void xchg_data(FILE *fp, int sockfd) {
             else {
                 od_set_cursor(47, 1);
                 printf(CLEARLINE);
-                printf("%s\n", recvline);
+                printf("%s", recvline);
                 fflush(stdout);
             }
         }
