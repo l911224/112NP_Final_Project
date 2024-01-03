@@ -559,12 +559,14 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
 
                     if (totalScoreTable[i][18] == maxScore) {
                         winner[i] = 1;
+                        count++;
                     }
                 }
-                if (count)
+                if (count > 1)
                     strcat(sendWinner, "m:Winner are ");
                 else
                     strcat(sendWinner, "m:Winner is ");
+                
                 for (int i = 0; i < 4; i++) {
                     if (sockfd[i] == 0) continue;
 
