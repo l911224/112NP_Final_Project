@@ -126,7 +126,7 @@ void draw_table() {
     od_disp_str_white("　├─────────────┼─────────────┼──────────┼──────────┼──────────┼──────────┤\r\n");
     od_disp_str_white("　│Chance       │     Sum     │          │          │          │          │\r\n");
     od_disp_str_white("　├─────────────┼─────────────┼──────────┼──────────┼──────────┼──────────┤\r\n");
-    od_disp_str_white("　│YAHTZEE BONUS│ (each) +100 │          │          │          │          │\r\n");
+    od_disp_str_white("　│YAHTZEE BONUS│  (per) +50  │          │          │          │          │\r\n");
     od_disp_str_white("　├─────────────┼─────────────┼──────────┼──────────┼──────────┼──────────┤\r\n");
     od_disp_str_white("　│LOWER TOTAL  │  ========>  │          │          │          │          │\r\n");
     od_disp_str_white("　├─────────────┼─────────────┼──────────┼──────────┼──────────┼──────────┤\r\n");
