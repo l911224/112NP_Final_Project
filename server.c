@@ -358,7 +358,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         countScore(diceValue, scoreTable);
                         // Yahtzee bonus
                         if (scoreTable[14] == 50 && totalScoreTable[turn][14] != -1) {
-                            totalScoreTable[turn][16] += 100;
+                            totalScoreTable[turn][16] += 50;
                         }
                         char sendScore[MAXLINE] = {0};
                         for (int j = 0; j < 19; j++) {  // sendScore like : 1,2,3,4,5,6,7,8,-1,-1,0,0,-1,-1,0,0,12,13,-1
