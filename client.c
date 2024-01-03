@@ -67,6 +67,14 @@ int getch() {
     return ch;
 }
 
+void set_cursor_bottom() {
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+
+    int rows = w.ws_row;
+    od_set_cursor(rows, 1);
+}
+
 void putxy(int x, int y, char *str, char *color) {
     od_set_cursor(x, y);
     printf("%s%s" WHITE, color, str);
@@ -573,7 +581,7 @@ void xchg_data(FILE *fp, int sockfd) {
                 putxy(9 + x, 1, "Enter [2] to show your game history\n", WHITE);
                 putxy(11 + x, 1, "Enter [3] to show players in the room\n", WHITE);
                 putxy(13 + x, 1, "Enter [4] to exit\n", WHITE);
-                od_set_cursor(47, 1);
+                set_cursor_bottom();
             }
         }
 
