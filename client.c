@@ -546,7 +546,7 @@ void xchg_data(FILE *fp, int sockfd) {
             else {
                 od_set_cursor(47, 1);
                 printf(CLEARLINE);
-                printf("%s", recvline);
+                printf("%s\n", recvline);
                 fflush(stdout);
             }
         }
