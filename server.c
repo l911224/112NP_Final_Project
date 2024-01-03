@@ -20,6 +20,7 @@ struct timeval timeout = {0, 10};
 struct thread_sockfd_data{
     int *sockfd[4];
     int *flag;
+    int *timerFill;
 };
 
 void sigchld_handler(int signo);
@@ -237,7 +238,7 @@ int main(int argc, char **argv) {
 
 void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addSockfd, char *IDBuffer, int *disconnect) {
     char sendline[MAXLINE], recvline[MAXLINE], diceValue[6] = {0}, diceToRoll[6] = {0};
-    int maxfdp1 = -1, stepCount = -1, turn = -1, oneTurnDoneFlag = 1, scoreTable[19], totalScoreTable[4][19], first = 1, endGame = 0, gameType, timerFlag = 0;
+    int maxfdp1 = -1, stepCount = -1, turn = -1, oneTurnDoneFlag = 1, scoreTable[19], totalScoreTable[4][19], first = 1, endGame = 0, gameType, timerFlag = 0, timerFill = 0;
     memset(totalScoreTable, -1, sizeof(totalScoreTable));
     memset(scoreTable, -1, sizeof(scoreTable));
     // Initialize yahtzee bonus
@@ -280,9 +281,8 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
         if (numOfPlayer == 0) break;
         maxfdp1 += 1;
         int sel = select(maxfdp1, &rset, 0, 0, &timeout);
-        if (sel == 0)
-            continue;
-        else if (sel < 0) {
+
+        if (sel < 0) {
             if (errno == EINTR) {
                 continue;
             }
@@ -303,7 +303,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         *disconnect = sockfd[i];
                         for (int j = 0; j < 4; j++) {  // Broadcast to all users.
                             if (j == i || sockfd[j] == 0) continue;
-                            sprintf(sendline, "m:Player %s has left the room.\n\n", userID[i]);
+                            sprintf(sendline, "m:Player %d has left the room.\n\n", i + 1);
                             Writen(sockfd[j], sendline, MAXLINE);
                         }
                         logout(userID[i]);  // logout
@@ -333,7 +333,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                         *disconnect = sockfd[i];
                         for (int j = 0; j < 4; j++) {  // Broadcast to all users.
                             if (j == i || sockfd[j] == 0) continue;
-                            sprintf(sendline, "m:Player %s has left the room.\n\n", userID[i]);
+                            sprintf(sendline, "m:Player %d has left the room.\n\n", i + 1);
                             Writen(sockfd[j], sendline, MAXLINE);
                         }
                         logout(userID[i]);  // logout
@@ -385,6 +385,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                             } */
                             continue;
                         }
+
                         int toFill = 0;
                         sscanf(recvline, "%*[^:]:%d\n", &toFill);
                         if (totalScoreTable[turn][toFill] != -1 || toFill == 6 || toFill == 7 || toFill == 8 || toFill == 16 || toFill == 17 || toFill == 18) {  // Illegal operation
@@ -395,7 +396,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                             totalScoreTable[turn][toFill] = scoreTable[toFill];
                             oneTurnDoneFlag = 1;
                             // Check players totalScoreTable bonus
-            
+
                             // Upper section
                             int flag = 1, sum = 0;
                             for (int j = 0; j < 6; j++) {
@@ -428,7 +429,6 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                             char sendScore[MAXLINE] = {0};
                             strcat(sendScore, "a:"); // all table
                             for (int j = 0; j < 4; j++) {  // sendScore like a:1: 1,2,3,4,5,6,7,8,-1,-1,0,0,-1,-1,0,0,12,13,-1\n
-                                if (sockfd[j] == 0) continue;
                                 char n[30];
                                 sprintf(n, "%d:", j);
                                 strcat(sendScore, n);
@@ -456,6 +456,81 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
                     }
                 }
             }
+        }
+
+
+        if(timerFill == 1){
+            printf("timer fill entered\n");
+            timerFill = 0;
+            int flag = 0;
+            for(int j = 0; j < 6; j++){
+                if(totalScoreTable[turn][j] == -1){
+                    flag = 1;
+                    totalScoreTable[turn][j] = scoreTable[j];
+                    break;
+                }
+            }
+            if(flag) goto CHECK;
+            for(int j = 9; j < 16; j++){
+                if(totalScoreTable[turn][j] == -1){
+                    flag = 1;
+                    totalScoreTable[turn][j] = scoreTable[j];
+                    break;
+                }
+            }
+
+            CHECK:
+            oneTurnDoneFlag = 1;
+            // Check players totalScoreTable bonus
+
+            // Upper section
+            flag = 1;
+            int sum = 0;
+            for (int j = 0; j < 6; j++) {
+                if (totalScoreTable[turn][j] == -1) {
+                    flag = 0;
+                    break;
+                }
+                sum += totalScoreTable[turn][j];
+            }
+            if (flag) {
+                totalScoreTable[turn][6] = sum;
+                totalScoreTable[turn][7] = (sum > 63) ? 35 : 0;
+                totalScoreTable[turn][8] = totalScoreTable[turn][6] + totalScoreTable[turn][7];
+            }
+            // Lower section
+            flag = 1, sum = 0;
+            for (int j = 9; j < 17; j++) {
+                if (totalScoreTable[turn][j] == -1) {
+                    flag = 0;
+                    break;
+                }
+                sum += totalScoreTable[turn][j];
+            }
+            if (flag) {
+                totalScoreTable[turn][17] = sum;
+                totalScoreTable[turn][18] = (totalScoreTable[turn][8] != -1) ? totalScoreTable[turn][17] + totalScoreTable[turn][8] : -1;
+            }
+
+            // Send current score table to all players
+            char sendScore[MAXLINE] = {0};
+            strcat(sendScore, "a:"); // all table
+            for (int j = 0; j < 4; j++) {  // sendScore like a:1: 1,2,3,4,5,6,7,8,-1,-1,0,0,-1,-1,0,0,12,13,-1\n
+                char n[30];
+                sprintf(n, "%d:", j);
+                strcat(sendScore, n);
+                for (int k = 0; k < 19; k++) {
+                    char tmp[30];
+                    sprintf(tmp, "%d,", totalScoreTable[j][k]);
+                    strcat(sendScore, tmp);
+                }
+                sendScore[strlen(sendScore) - 1] = ' ';
+            }
+            for (int j = 0; j < 4; j++) {
+                if (sockfd[j] == 0) continue;
+                Writen(sockfd[j], sendScore, MAXLINE);
+            }
+            printf("total score table sent\n");
         }
 
     // Send control messages
@@ -514,7 +589,7 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
 
             turn++;
             if (turn == 4) turn = 0;
-            printf("p%d turn\n", turn+1);
+            printf("p%d's turn\n", turn+1);
             if (sockfd[turn] == 0) goto NEXTTURN;  // No player, go to next turn
             oneTurnDoneFlag = 0;
             memset(diceValue, 0, sizeof(diceValue));
@@ -542,7 +617,9 @@ void gameRoom(int sockfd[4], char userID[4][MAXLINE], int *connfdFlag, int *addS
             }
             struct thread_sockfd_data data;
             data.flag = &timerFlag;
+            data.timerFill = &timerFill;
             timerFlag = 0;
+            timerFill = 0;
             for(int j = 0; j < 4; j++){
                 data.sockfd[j] = &sockfd[j];
             }
@@ -990,7 +1067,7 @@ void *timer(void *argv){
     memset(sendline, 0, sizeof(char) * MAXLINE);
     time_t cur_time = 0;
     time_t pre_time = 0;
-    
+    pthread_detach(pthread_self());
     time(&cur_time);
     pre_time = cur_time;
     sprintf(sendline, "l:%d\n", sec);
@@ -1013,8 +1090,8 @@ void *timer(void *argv){
             printf("%s", sendline);
         }
     }
+    *data->timerFill = 1;
     EXIT:
-    pthread_detach(pthread_self());
-    printf("Timer stopped!\n");
+    printf("Timer stopped and timerFill = %d\n", *data->timerFill);
     return;
 }
