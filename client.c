@@ -420,8 +420,14 @@ void xchg_data(FILE *fp, int sockfd) {
                 strcpy(msg, recvline + 2);
                 char *data = strtok(msg, "\n");
                 while (data != NULL) {
-                    if (!(data[0] == 'n' && data[1] == ':'))
-                        put_sys_msg(data);
+                    if (!(data[0] == 'n' && data[1] == ':')) {
+                        if (strstr(data, "Winner") != NULL) {
+                            char tmp[MAXLINE];
+                            sprintf(tmp, "%s%s", RED, data);
+                            put_sys_msg(tmp);
+                        }
+                        else put_sys_msg(data);
+                    }
                     data = strtok(NULL, "\n");
                 }
                 
