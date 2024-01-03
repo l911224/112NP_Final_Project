@@ -278,14 +278,14 @@ void draw_cmd_board(int x, int y) {
 }
 
 void draw_time_board(int x, int y, char *color) {
-    putxy(x    , y, "┌────────────┐", color);
-    putxy(x + 1, y, "│ COUNT DOWN │", color);
-    putxy(x + 2, y, "├────────────┤", color);
-    putxy(x + 3, y, "│            │", color);
-    putxy(x + 4, y, "│            │", color);
-    putxy(x + 5, y, "│   SECOND   │", color);
-    putxy(x + 6, y, "│            │", color);
-    putxy(x + 7, y, "└────────────┘", color);
+    putxy(x    , y, "┌─────────────┐", color);
+    putxy(x + 1, y, "│  TIME LEFT  │", color);
+    putxy(x + 2, y, "├─────────────┤", color);
+    putxy(x + 3, y, "│             │", color);
+    putxy(x + 4, y, "│             │", color);
+    putxy(x + 5, y, "│   SECONDS   │", color);
+    putxy(x + 6, y, "│             │", color);
+    putxy(x + 7, y, "└─────────────┘", color);
 }
 
 void start_game() {
@@ -299,7 +299,7 @@ void start_game() {
     draw_dice_outline(12, 101, WHITE);
     draw_sys_msg_board(19, 77);
     draw_cmd_board(38, 77);
-    draw_time_board(38, 109, WHITE);
+    draw_time_board(38, 108, WHITE);
 
     // initialize
     line_num = 0;
@@ -491,17 +491,16 @@ void xchg_data(FILE *fp, int sockfd) {
             else if (recvline[0] == 'l' && recvline[1] == ':') { // time limit
                 int time_left = strtol(recvline + 2, NULL, 10);
                 if (time_left >= 20) {
-                    draw_time_board(38, 109, GREEN);
-                    putxy(42, 115, recvline + 2, GREEN);
+                    draw_time_board(38, 108, GREEN);
+                    putxy(42, 114, recvline + 2, GREEN);
                 }
                 else if (time_left < 20 && time_left >= 10) {
-                    draw_time_board(38, 109, YELLOW);
-                    putxy(42, 115, recvline + 2, YELLOW);
+                    draw_time_board(38, 108, YELLOW);
+                    putxy(42, 114, recvline + 2, YELLOW);
                 }
                 else if (time_left < 10) {
-                    draw_time_board(38, 109, RED);
-                    putxy(42, 115, "0", RED);
-                    putxy(42, 116, recvline + 2, RED);
+                    draw_time_board(38, 108, RED);
+                    putxy(42, 115, recvline + 2, RED);
                 }
                 move_selector(0);
             }
