@@ -164,8 +164,7 @@ int main(int argc, char **argv) {
             numOfMember++;
             char sendline[MAXLINE];
             // Broadcast to all players
-            sprintf(sendline, "%s entered the waiting room. There are %d players waiting now.\n\nIn the waiting room, you can type to chat with other players.\n\nPress [1] to start a game.\nPress [2] to show your game history.\nPress [3] to show players in waiting room.\nPress [4]"
-            " to exit the game.\n\n", IDBuffer, numOfMember);
+            sprintf(sendline, "%s entered the waiting room. There are %d players waiting now.\n\n", IDBuffer, numOfMember);
             for (int i = 0; i < 4; i++) {
                 if (waitingRoomConnfd[i] == 0 || i == freeSpace) continue;
                 Writen(waitingRoomConnfd[i], sendline, MAXLINE);

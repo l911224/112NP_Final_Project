@@ -404,8 +404,8 @@ void xchg_data(FILE *fp, int sockfd) {
 
         if (FD_ISSET(sockfd, &rset)) {
             if (Read(sockfd, recvline, MAXLINE) == 0) {
-                set_cursor_bottom();
-                od_disp_str_red("Server has aborted.\n");
+                // set_cursor_bottom();
+                // od_disp_str_red("Server has aborted.\n");
                 return;
             }
 
